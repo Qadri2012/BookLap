@@ -5,10 +5,14 @@ import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
-  base: "/NAMA-REPO/",
+
+  base: "/BookLap/",
+
   build: {
-    outDir: "docs",
+    outDir: "../docs",
+    emptyOutDir: true,
   },
+
   test: {
     environment: "jsdom",
     setupFiles: "./src/setupTests.js",
