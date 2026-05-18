@@ -1,123 +1,111 @@
-const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+const BASE_URL = "http://localhost:5000/api";
 
-// Helper parse JSON aman
+// ── Helper parse JSON aman ────────────────────────────────────────────────────
 function parseJSON(val, fallback) {
-  if (val === null || val === undefined || val === "") return fallback;
+  if (!val) return fallback;
   if (typeof val === "object") return val;
-
-  try {
-    return JSON.parse(val);
-  } catch {
-    return fallback;
-  }
+  try { return JSON.parse(val); }
+  catch { return fallback; }
 }
 
-// Helper parse lapangan dari backend
+// ── Helper parse satu lapangan dari backend ───────────────────────────────────
 function parseLapangan(d) {
   return {
     ...d,
-    foto: parseJSON(d.foto, []),
-    fasilitas: parseJSON(d.fasilitas, []),
+    foto:             parseJSON(d.foto, []),
+    fasilitas:        parseJSON(d.fasilitas, []),
     hari_operasional: parseJSON(d.hari_operasional, null),
-    rating: d.rating ?? 0,
-    reviews: d.reviews ?? 0,
+    rating:           d.rating  ?? 0,
+    reviews:          d.reviews ?? 0,
   };
 }
 
-// Token helper
+// ── Token helper ──────────────────────────────────────────────────────────────
 function getToken() {
   return localStorage.getItem("token");
 }
 
-// Helper request umum
-async function request(url, options = {}) {
-  const res = await fetch(url, options);
+// ── LAPANGAN ──────────────────────────────────────────────────────────────────
 
-  let data = null;
-  try {
-    data = await res.json();
-  } catch {
-    data = null;
-  }
-
-  if (!res.ok) {
-    throw new Error(data?.message || "Request gagal");
-  }
-
-  return data;
-}
-
-// LAPANGAN
 export const getLapangan = async (params = {}) => {
   const query = new URLSearchParams(params).toString();
-  const url = `${BASE_URL}/lapangan${query ? `?${query}` : ""}`;
-  const data = await request(url);
+  const url   = `${BASE_URL}/lapangan${query ? `?${query}` : ""}`;
+  const res   = await fetch(url);
+  const data  = await res.json();
   return Array.isArray(data) ? data.map(parseLapangan) : [];
 };
 
 export const getLapanganById = async (id) => {
-  const data = await request(`${BASE_URL}/lapangan/${id}`);
+  const res  = await fetch(`${BASE_URL}/lapangan/${id}`);
+  const data = await res.json();
   return parseLapangan(data);
 };
 
-// REVIEW
+// ── REVIEW ────────────────────────────────────────────────────────────────────
+
 export const getReviews = async (lapanganId) => {
-  const data = await request(`${BASE_URL}/review/${lapanganId}`);
+  const res  = await fetch(`${BASE_URL}/review/${lapanganId}`);
+  const data = await res.json();
   return Array.isArray(data) ? data : [];
 };
 
 export const createReview = async (payload) => {
-  return request(`${BASE_URL}/review`, {
-    method: "POST",
+  const res = await fetch(`${BASE_URL}/review`, {
+    method:  "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${getToken()}`,
+      Authorization:  `Bearer ${getToken()}`,
     },
     body: JSON.stringify(payload),
   });
+  return res.json();
 };
 
-// AUTH
+// ── AUTH ──────────────────────────────────────────────────────────────────────
+
 export const login = async (email, password) => {
-  return request(`${BASE_URL}/auth/login`, {
-    method: "POST",
+  const res = await fetch(`${BASE_URL}/auth/login`, {
+    method:  "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
+    body:    JSON.stringify({ email, password }),
   });
+  return res.json();
 };
 
-// Sesuaikan ini dengan backend kamu
-export const register = async (nama, no_hp, email, password) => {
-  return request(`${BASE_URL}/register`, {
-    method: "POST",
+export const register = async (username, email, password) => {
+  const res = await fetch(`${BASE_URL}/auth/register`, {
+    method:  "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ nama, no_hp, email, password }),
+    body:    JSON.stringify({ username, email, password }),
   });
+  return res.json();
 };
 
-// BOOKING
+// ── BOOKING ───────────────────────────────────────────────────────────────────
+
 export const getMyBookings = async () => {
-  return request(`${BASE_URL}/booking`, {
+  const res = await fetch(`${BASE_URL}/booking`, {
     headers: { Authorization: `Bearer ${getToken()}` },
   });
+  return res.json();
 };
 
 export const createBooking = async (payload) => {
-  return request(`${BASE_URL}/booking`, {
-    method: "POST",
+  const res = await fetch(`${BASE_URL}/booking`, {
+    method:  "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${getToken()}`,
+      Authorization:  `Bearer ${getToken()}`,
     },
     body: JSON.stringify(payload),
   });
+  return res.json();
 };
 
 export const cancelBooking = async (id) => {
-  return request(`${BASE_URL}/booking/${id}/cancel`, {
-    method: "PATCH",
-    headers: {
-      Authorization: `Bearer ${getToken()}`,
-    },
+  const res = await fetch(`${BASE_URL}/booking/${id}/cancel`, {
+    method:  "PATCH",
+    headers: { Authorization: `Bearer ${getToken()}` },
   });
+  return res.json();
 };
