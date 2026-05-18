@@ -7,7 +7,6 @@ export default defineConfig({
   plugins: [react()],
 
   base: "/BookLap/",
-
   build: {
     outDir: "../docs",
     emptyOutDir: true,
