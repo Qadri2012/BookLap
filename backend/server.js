@@ -16,7 +16,6 @@ const authRoutes = require("./routes/auth");
 const jadwalRoutes = require("./routes/jadwal");
 const upload = require("./middleware/upload");
 
-// INIT APP
 const app = express();
 
 const PORT = process.env.PORT || 5000;
@@ -29,9 +28,9 @@ app.use(
     credentials: true,
   })
 );
+
 app.use(express.json());
 
-// SESSION
 app.use(
   session({
     secret: "secret123",
