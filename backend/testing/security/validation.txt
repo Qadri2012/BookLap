@@ -1,0 +1,14 @@
+Validasi input digunakan untuk memastikan data yang dikirim pengguna sesuai dengan format dan aturan yang telah ditentukan sebelum diproses oleh backend. Validasi membantu mencegah input tidak valid dan mengurangi potensi error maupun serangan injection.
+
+Contoh Validasi:
+- Email harus menggunakan format yang valid
+- Password minimal 6 karakter
+- Field wajib tidak boleh kosong
+- Input angka harus berupa numerik
+
+Tujuan:
+- Mengurangi input tidak valid
+- Menghindari error saat proses backend
+- Menjaga kualitas dan konsistensi data
+- Membantu meningkatkan keamanan aplikasi
+- Mencegah pengiriman data yang tidak sesuai format

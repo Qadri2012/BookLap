@@ -1,0 +1,16 @@
+Express-rate-limit digunakan untuk membatasi jumlah request dari client dalam jangka waktu tertentu guna mencegah spam request dan brute force attack pada endpoint API.
+
+Implementasi:
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+Tujuan:
+- Mencegah spam request
+- Mengurangi risiko brute force attack
+- Membantu proteksi endpoint authentication
+- Menjaga stabilitas server saat menerima banyak request
+- Membatasi akses berlebihan dari client

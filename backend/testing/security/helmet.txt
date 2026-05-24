@@ -1,0 +1,15 @@
+Helmet digunakan sebagai middleware keamanan pada backend Express.js untuk menambahkan berbagai HTTP security headers secara otomatis. Implementasi Helmet membantu melindungi aplikasi dari beberapa jenis serangan web seperti clickjacking, MIME sniffing, dan Cross-Site Scripting (XSS).
+
+Implementasi:
+app.use(
+  helmet({
+    crossOriginResourcePolicy: false,
+  })
+);
+
+Tujuan:
+- Melindungi aplikasi dari clickjacking
+- Menambahkan HTTP security headers
+- Mengurangi risiko serangan XSS
+- Menyembunyikan informasi sensitif pada response header
+- Meningkatkan keamanan backend Express.js
