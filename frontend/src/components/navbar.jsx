@@ -1,7 +1,7 @@
 // navbar
 
 import { useEffect, useRef, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom"; // ✅ NEW
 
 const NAV_LINKS = [
   { to: "/", label: "Beranda" },
@@ -13,6 +13,9 @@ const NAV_LINKS = [
 
 export default function Navbar() {
   const location = useLocation();
+  const navigate = useNavigate(); // ✅ NEW
+  const [dropOpen, setDropOpen] = useState(false); // ✅ NEW
+  // const user = JSON.parse(localStorage.getItem("user") || "{}"); // ✅ NEW
   const navRef = useRef(null);
 
   const [activeStyle, setActiveStyle] = useState({});
@@ -21,6 +24,10 @@ export default function Navbar() {
   const isLoggedIn = !!localStorage.getItem("token");
   const user = JSON.parse(localStorage.getItem("user") || "null");
   const displayName = user?.nama || "Akun Saya";
+  // ✅ NEW: sembunyikan navbar di halaman cash
+const isCashPage = location.pathname.startsWith("/cash");
+
+if (isCashPage) return null;
 
   // // const isLogin = location.pathname.startsWith("/login");
   // const isLoggedIn = !!localStorage.getItem("token");
@@ -60,46 +67,55 @@ export default function Navbar() {
     <nav
   className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500`}
   style={{
-    background: isLoginPage 
-      ? "#fff"
-      : isDetailLapangan
-      ? "linear-gradient(135deg, #0a2e14 0%, #143d1e 50%, #0a2e14 100%)"
-      : scrolled
-      ? "linear-gradient(135deg, #0a2e14 0%, #143d1e 50%, #0a2e14 100%)"
-      : "transparent",
-    boxShadow: isLoginPage 
-      ? "0 2px 10px rgba(0,0,0,0.08)"
-      : (isDetailLapangan || scrolled)
-      ? "0 2px 20px rgba(0,0,0,0.3)"
-      : "none",
-    borderBottom: (isDetailLapangan || scrolled)
-      ? "1px solid rgba(74,222,128,0.15)"
-      : "none",
-    // ✅ overflow hidden supaya glow tidak keluar navbar
-    overflow: "hidden",
-  }}
+  background: isLoginPage
+    ? "#fff"
+    : isDetailLapangan
+    ? "linear-gradient(135deg, #0a2e14 0%, #143d1e 50%, #0a2e14 100%)"
+    : scrolled
+    ? "linear-gradient(135deg, #0a2e14 0%, #143d1e 50%, #0a2e14 100%)"
+    : "transparent",
+  boxShadow: isLoginPage
+    ? "0 2px 10px rgba(0,0,0,0.08)"
+    : isDetailLapangan || scrolled
+    ? "0 2px 20px rgba(0,0,0,0.3)"
+    : "none",
+  borderBottom: isDetailLapangan || scrolled
+    ? "1px solid rgba(74,222,128,0.15)"
+    : "none",
+  overflow: "visible", // ✅ NEW
+}}
 >
-  {/* GLOW KANAN — sama dengan footer */}
-  {(isDetailLapangan || scrolled) && !isLoginPage && (
-    <div style={{
-      position: "absolute", top: -60, right: -60,
-      width: 200, height: 200,
-      background: "radial-gradient(circle, rgba(24,109,34,0.5) 0%, rgba(22,163,74,0.15) 40%, transparent 70%)",
-      pointerEvents: "none",
-      zIndex: 0,
-    }} />
-  )}
+  {/* GLOW KANAN */}
+<div
+  style={{
+    position: "absolute",
+    top: -80,
+    right: -120,
+    width: 260,
+    height: 260,
+    background:
+      "radial-gradient(circle, rgba(24,109,34,0.22) 0%, rgba(22,163,74,0.10) 35%, rgba(10,46,20,0.02) 65%, transparent 100%)",
+    pointerEvents: "none",
+    zIndex: 0,
+    filter: "blur(8px)", // ✅ NEW
+  }}
+/>
 
-  {/* GLOW KIRI — sama dengan footer */}
-  {(isDetailLapangan || scrolled) && !isLoginPage && (
-    <div style={{
-      position: "absolute", top: -60, left: -60,
-      width: 180, height: 180,
-      background: "radial-gradient(circle, rgba(74,222,128,0.3) 0%, rgba(22,163,74,0.1) 40%, transparent 70%)",
-      pointerEvents: "none",
-      zIndex: 0,
-    }} />
-  )}
+  {/* GLOW KIRI */}
+<div
+  style={{
+    position: "absolute",
+    top: -80,
+    left: -120,
+    width: 260,
+    height: 260,
+    background:
+      "radial-gradient(circle, rgba(24,109,34,0.22) 0%, rgba(22,163,74,0.10) 35%, rgba(10,46,20,0.02) 65%, transparent 100%)",
+    pointerEvents: "none",
+    zIndex: 0,
+    filter: "blur(8px)", // ✅ NEW
+  }}
+/>
 
   <div className="max-w-7xl mx-auto px-6 lg:px-10" style={{ position: "relative", zIndex: 1 }}>
     <div className="flex items-center justify-between h-16">
@@ -139,56 +155,179 @@ export default function Navbar() {
               </Link>
             ))}
 
-            {/* SIGN IN */}
             {isLoggedIn ? (
-  <Link
-    to="/profil"
-    className="px-5 py-2 rounded-full text-sm font-medium flex items-center gap-2 bg-white/20 text-white border border-white/30 hover:bg-white/30 transition"
-  >
-    <span className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center">
-      👤
-    </span>
-    {displayName}
-  </Link>
-) : (
-  <>
+  <div style={{ position: "relative" }}>
+    {/* Tombol avatar */}
+    <button
+      onClick={() => setDropOpen((p) => !p)}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "8px",
+        background: "rgba(255,255,255,0.12)",
+        border: "1px solid rgba(255,255,255,0.2)",
+        borderRadius: "99px",
+        padding: "5px 12px 5px 5px",
+        cursor: "pointer",
+        transition: "all 0.2s",
+      }}
+    >
+      <div
+        style={{
+          width: "30px",
+          height: "30px",
+          borderRadius: "50%",
+          background: "linear-gradient(135deg, #16a34a, #4ade80)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: "13px",
+          fontWeight: 800,
+          color: "#fff",
+        }}
+      >
+        {(user.nama || user.username || "U")[0].toUpperCase()}
+      </div>
+
+      <span style={{ fontSize: "13px", fontWeight: 600, color: "#fff" }}>
+        {user.nama || user.username || "Pengguna"}
+      </span>
+
+      <svg
+        width="12"
+        height="12"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="white"
+        strokeWidth="2.5"
+        style={{
+          transform: dropOpen ? "rotate(180deg)" : "rotate(0)",
+          transition: "transform 0.2s",
+        }}
+      >
+        <path d="M6 9l6 6 6-6" />
+      </svg>
+    </button>
+
+    {/* Dropdown menu */}
+    {dropOpen && (
+      <div
+        style={{
+          position: "absolute",
+          top: "calc(100% + 10px)",
+          right: 0,
+          width: "220px",
+          borderRadius: "16px",
+          background: "#fff",
+          border: "1px solid #e5e7eb",
+          boxShadow: "0 16px 48px rgba(0,0,0,0.14)",
+          overflow: "hidden",
+          zIndex: 9999,
+          animation: "dropDown 0.2s ease",
+        }}
+      >
+        {/* Header user info */}
+       
+
+        {/* Menu items */}
+        {[
+          { icon: "👤", label: "Profil Saya", path: "/profil" },
+        
+          { icon: "🔔", label: "Notifikasi", path: "/notifikasi" },
+         
+          { icon: "⚙️", label: "Pengaturan", path: "/profil?tab=keamanan" },
+        ].map(({ icon, label, path }) => (
+          <button
+            key={label}
+            onClick={() => {
+              navigate(path);
+              setDropOpen(false);
+            }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              width: "100%",
+              padding: "11px 16px",
+              border: "none",
+              background: "transparent",
+              cursor: "pointer",
+              fontSize: "13px",
+              color: "#374151",
+              fontWeight: 500,
+              fontFamily: "'Plus Jakarta Sans', sans-serif",
+              transition: "background 0.15s",
+              textAlign: "left",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "#f9fafb")}
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.background = "transparent")
+            }
+          >
+            <span style={{ fontSize: "15px" }}>{icon}</span>
+            {label}
+          </button>
+        ))}
+
+        <div style={{ height: "1px", background: "#f3f4f6" }} />
+
+        <button
+          onClick={() => {
+            localStorage.removeItem("token");
+            localStorage.removeItem("user");
+            navigate("/login");
+            setDropOpen(false);
+          }}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            width: "100%",
+            padding: "11px 16px",
+            border: "none",
+            background: "transparent",
+            cursor: "pointer",
+            fontSize: "13px",
+            color: "#dc2626",
+            fontWeight: 600,
+            fontFamily: "'Plus Jakarta Sans', sans-serif",
+            transition: "background 0.15s",
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "#fef2f2")}
+          onMouseLeave={(e) =>
+            (e.currentTarget.style.background = "transparent")
+          }
+        >
+          <span>🚪</span> Keluar
+        </button>
+      </div>
+    )}
+  </div>
+              ) : (
+  <div className="flex items-center gap-3">
     <Link
       to="/login"
-      className={`px-5 py-2 rounded-full text-sm font-medium transition backdrop-blur-md
-      ${
+      className={`rounded-full px-5 py-2 text-sm font-semibold transition backdrop-blur-md ${
         isLoginPage
-          ? "bg-white/70 text-gray-900 border border-gray-200 shadow-sm"
-          : "border border-white/60 text-white hover:bg-white/10"
+          ? "border border-gray-200 bg-white/80 text-gray-900 shadow-sm hover:bg-white"
+          : "border border-white/30 bg-white/10 text-white hover:bg-white/20"
       }`}
     >
-      ↪ Sign In
+      Sign In
     </Link>
 
     <Link
-      to="/register"
-      className={`px-5 py-2 rounded-full text-sm font-semibold transition ${
+      to="/login?mode=register"
+      className={`rounded-full px-5 py-2 text-sm font-semibold transition ${
         isLoginPage
-          ? "bg-[#186d22] text-white hover:bg-green-500"
-          : "bg-[#186d22] text-white hover:bg-[#65c470]"
+          ? "bg-[#186d22] text-white hover:bg-[#145a1c]"
+          : "bg-[#186d22] text-white hover:bg-[#145a1c]"
       }`}
     >
       Gabung Sekarang
     </Link>
-  </>
+  </div>
 )}
-
-            {/* REGISTER */}
-            {/* <Link
-              to="/register"
-              className={`px-5 py-2 rounded-full text-sm font-semibold transition ${
-                isLoginPage
-                  ? "bg-[#186d22] text-white hover:bg-green-500"
-                  : "bg-[#186d22] text-white hover:bg-[#65c470]"
-              }`}
-            >
-              Gabung Sekarang
-            </Link> */}
-
             {/* UNDERLINE */}
             {!isLoginPage && (
               <span

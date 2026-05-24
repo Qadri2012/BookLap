@@ -10,9 +10,11 @@ const MetodeTransfer = sequelize.define(
       primaryKey: true,
       autoIncrement: true,
     },
-    metode_pembayaran_id: {
-      type: DataTypes.BIGINT,
+    // ✅ NEW: kategori pembayaran
+    kategori: {
+      type: DataTypes.STRING(20),
       allowNull: false,
+      defaultValue: "bank",
     },
     kode: {
       type: DataTypes.STRING(20),

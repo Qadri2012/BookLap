@@ -6,6 +6,7 @@ import Navbar from "../components/navbar";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getLapangan } from "../services/api";
 import Footer from "../components/Footer";
+import gambar4 from "../assets/gambar4.png"; // ✅ NEW
 
 
 import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
@@ -1336,70 +1337,79 @@ function detectLocation() {
     transition: "opacity 0.4s ease",
   }}
 >
+   
   {/* GAMBAR LAPANGAN */}
-  <img
-    src="/lapangan.png"
-    alt="Lapangan"
-    style={{
-      position: "absolute", inset: 0,
-      width: "100%", height: "100%",
-      objectFit: "cover", objectPosition: "center",
-    }}
-  />
-  <div style={{ position: "absolute", inset: 0, background: "rgba(0,10,5,0.38)" }} />
+<img
+  src={gambar4}
+  alt="gambar4"
+  style={{
+    position: "absolute",
+    inset: 0,
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+    objectPosition: "center",
+  }}
+/>
+  {/* ── OVERLAY LEBIH GELAP agar kartu dan teks lebih menonjol ── */}
+  <div style={{
+    position: "absolute", inset: 0,
+    background: "linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.45) 60%, rgba(0,0,0,0.60) 100%)",
+  }} />
 
-  {/* WRAPPER UTAMA — vertikal, center */}
+  {/* WRAPPER UTAMA */}
   <div
     style={{
       position: "absolute",
-      top: "62%",
+      top: "55%",
       left: "50%",
       transform: "translate(-50%, -50%)",
       width: "100%",
-      padding: "0 24px",
+      maxWidth: "1200px",
+      padding: "0 32px",
       pointerEvents: "auto",
       display: "flex",
       flexDirection: "column",
       alignItems: "center",
-      gap: "20px",
+      gap: "16px",
     }}
   >
+  
     {/* ── BARIS ATAS: tombol teks ── */}
-    <div style={{ width: "100%", maxWidth: "1100px", display: "flex", justifyContent: "center" }}>
-      <button
-        
-        style={{
-          
-          background: "#186d22",
-          color: "#fff",
-          border: "none",
-          borderRadius: "12px",
-          padding: "12px 28px",
-          fontSize: "40px",
-          fontWeight: 700,
-          cursor: "pointer",
-          fontFamily: "'Plus Jakarta Sans', sans-serif",
-          boxShadow: "0 4px 20px rgba(22,163,74,0.4)",
-          letterSpacing: "0.01em",
-          transition: "all 0.2s",
-           marginBottom: "-10px",
-        }}
-        onMouseEnter={e => e.currentTarget.style.background = "#15601e"}
-        onMouseLeave={e => e.currentTarget.style.background = "#186d22"}
-      >
-        Mulai Pertandinganmu Bersama BookLap
-      </button>
+     {/* ── JUDUL — lebih kecil, elegan ── */}
+    <div style={{ textAlign: "center", marginBottom: "4px" }}>
+      <p style={{
+        fontSize: "11px",
+        fontWeight: 700,
+        color: "#4ade80",
+        letterSpacing: "0.18em",
+        textTransform: "uppercase",
+        marginBottom: "8px",
+        fontFamily: "'Plus Jakarta Sans', sans-serif",
+      }}>
+        Platform Booking Lapangan
+      </p>
+      <h2 style={{
+        fontSize: "28px",
+        fontWeight: 800,
+        color: "#ffffff",
+        letterSpacing: "-0.02em",
+        fontFamily: "'Plus Jakarta Sans', sans-serif",
+        textShadow: "0 2px 16px rgba(0,0,0,0.4)",
+        lineHeight: 1.2,
+      }}>
+        Mulai Pertandinganmu Bersama{" "}
+        <span style={{ color: "#4ade80" }}>BookLap</span>
+      </h2>
     </div>
 
-    {/* ── 4 KARTU ── */}
+     {/* ── 4 KARTU — glassmorphism ── */}
     <div
       style={{
         display: "grid",
         gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-        gap: "18px",
+        gap: "14px",
         width: "100%",
-        maxWidth: "1100px",
-        margin: "0 auto",
       }}
     >
       {FEATURES.map(({ icon, title, desc }, i) => {
@@ -1415,20 +1425,53 @@ function detectLocation() {
               justifyContent: "center",
               textAlign: "center",
               borderRadius: "20px",
-              padding: "28px 20px",
+              padding: "24px 18px",
               cursor: "pointer",
-              background: isActive ? "#186d22" : "rgba(255,255,255,0.96)",
-              border: isActive ? "2px solid rgba(74,222,128,0.5)" : "1px solid rgba(255,255,255,0.3)",
-              boxShadow: isActive ? "0 12px 40px rgba(22,163,74,0.4)" : "0 8px 32px rgba(0,0,0,0.22)",
-              transform: isActive ? "translateY(-6px) scale(1.03)" : "translateY(0) scale(1)",
+              // ── Glassmorphism saat tidak aktif ──
+              background: isActive
+                ? "rgba(22,163,74,0.85)"
+                : "rgba(255,255,255,0.13)",
+              backdropFilter: "blur(18px)",
+              WebkitBackdropFilter: "blur(18px)",
+              border: isActive
+                ? "1.5px solid rgba(74,222,128,0.5)"
+                : "1px solid rgba(255,255,255,0.22)",
+              boxShadow: isActive
+                ? "0 12px 40px rgba(22,163,74,0.35)"
+                : "0 8px 32px rgba(0,0,0,0.18)",
+              transform: isActive
+                ? "translateY(-6px) scale(1.03)"
+                : "translateY(0) scale(1)",
               transition: "all 0.35s cubic-bezier(.34,1.56,.64,1)",
             }}
+            onMouseEnter={e => {
+              if (activeFeature !== i) {
+                e.currentTarget.style.background = "rgba(255,255,255,0.22)";
+                e.currentTarget.style.transform = "translateY(-3px)";
+              }
+            }}
+            onMouseLeave={e => {
+              if (activeFeature !== i) {
+                e.currentTarget.style.background = "rgba(255,255,255,0.13)";
+                e.currentTarget.style.transform = "translateY(0)";
+              }
+            }}
           >
-            <div style={{ fontSize: "32px", marginBottom: "12px" }}>{icon}</div>
-            <h3 style={{ fontWeight: 700, fontSize: "14px", marginBottom: "6px", color: isActive ? "#fff" : "#111827", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+            <div style={{ fontSize: "30px", marginBottom: "10px" }}>{icon}</div>
+            <h3 style={{
+              fontWeight: 700,
+              fontSize: "13.5px",
+              marginBottom: "5px",
+              color: "#ffffff",
+              fontFamily: "'Plus Jakarta Sans', sans-serif",
+            }}>
               {title}
             </h3>
-            <p style={{ fontSize: "12px", lineHeight: 1.6, color: isActive ? "rgba(255,255,255,0.8)" : "#6b7280" }}>
+            <p style={{
+              fontSize: "12px",
+              lineHeight: 1.55,
+              color: isActive ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.65)",
+            }}>
               {desc}
             </p>
           </div>
@@ -1436,36 +1479,45 @@ function detectLocation() {
       })}
     </div>
 
-    {/* ── BARIS BAWAH: link teks ── */}
-    <div style={{ width: "100%", maxWidth: "1100px", display: "flex", justifyContent: "center" }}>
-      <button
-        onClick={() => navigate("/tentangkami")}
-        style={{
-          background: "rgba(255,255,255,0.12)",
-          color: "#fff",
-          border: "1px solid rgba(255,255,255,0.3)",
-          borderRadius: "12px",
-          padding: "10px 24px",
-          fontSize: "30px",
-          fontWeight: 600,
-          cursor: "pointer",
-          fontFamily: "'Plus Jakarta Sans', sans-serif",
-          backdropFilter: "blur(8px)",
-          display: "flex",
-          alignItems: "center",
-          gap: "8px",
-          transition: "all 0.2s",
-          marginTop: "-10px",
-        }}
-        onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.22)"; }}
-        onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.12)"; }}
-      >
-        Cari tahu lebih lanjut tentang kami
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-          <path d="M5 12h14M12 5l7 7-7 7"/>
-        </svg>
-      </button>
-    </div>
+    {/* ── TOMBOL CTA — lebih proporsional ── */}
+    <button
+      onClick={() => navigate("/tentangkami")}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "8px",
+        background: "rgba(255,255,255,0.10)",
+        color: "#fff",
+        border: "1px solid rgba(255,255,255,0.28)",
+        borderRadius: "99px",
+        padding: "10px 22px",
+        fontSize: "13.5px",
+        fontWeight: 600,
+        cursor: "pointer",
+        fontFamily: "'Plus Jakarta Sans', sans-serif",
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
+        transition: "all 0.2s ease",
+        marginTop: "4px",
+        letterSpacing: "0.01em",
+      }}
+      onMouseEnter={e => {
+        e.currentTarget.style.background = "rgba(255,255,255,0.20)";
+        e.currentTarget.style.borderColor = "rgba(255,255,255,0.45)";
+        e.currentTarget.style.transform = "translateY(-1px)";
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.background = "rgba(255,255,255,0.10)";
+        e.currentTarget.style.borderColor = "rgba(255,255,255,0.28)";
+        e.currentTarget.style.transform = "translateY(0)";
+      }}
+    >
+      Cari tahu lebih lanjut tentang kami
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+        <path d="M5 12h14M12 5l7 7-7 7"/>
+      </svg>
+    </button>
+
   </div>
 </div>
 

@@ -1,12 +1,15 @@
 // src/pages/transfer.jsx
-import React, { useMemo, useState } from "react";
-import { useLocation } from "react-router-dom";
+import React, { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom"; // ✅ NEW
 import briLogo from "../assets/bank/bri.png";
 import bniLogo from "../assets/bank/bni.png";
 import bsiLogo from "../assets/bank/bsi.png";
 import mandiriLogo from "../assets/bank/mandiri.png";
 import indomaretLogo from "../assets/bank/indomaret.png";
-import ewalletLogo from "../assets/bank/ewallet.png";
+import gopayLogo from "../assets/bank/gopay.png";
+import ovoLogo from "../assets/bank/ovo.png";
+import danaLogo from "../assets/bank/dana.png";
+import shopeepayLogo from "../assets/bank/shopeepay.png";
 import {
   Check,
   Clock3,
@@ -21,29 +24,35 @@ import {
   Banknote,
 } from "lucide-react";
 
+const paymentLogoMap = {
+  bni: bniLogo,
+  bri: briLogo,
+  bsi: bsiLogo,
+  mandiri: mandiriLogo,
+  indomaret: indomaretLogo,
+  gopay: gopayLogo,
+  ovo: ovoLogo,
+  dana: danaLogo,
+  shopeepay: shopeepayLogo,
+};
+
 const bankLabelMap = {
   bni: "BNI",
   bri: "BRI",
   bsi: "BSI",
   mandiri: "Mandiri",
   indomaret: "Indomaret",
-  ewallet: "E-Wallet",
-};
-
-const bankLogoMap = {
-  bni: bniLogo,
-  bri: briLogo,
-  bsi: bsiLogo,
-  mandiri: mandiriLogo,
-  indomaret: indomaretLogo,
-  ewallet: ewalletLogo,
+  gopay: "GoPay",
+  ovo: "OVO",
+  dana: "DANA",
+  shopeepay: "ShopeePay",
 };
 
 const rupiah = (value) => `Rp ${Number(value || 0).toLocaleString("id-ID")}`;
 
 export default function Transfer() {
   const location = useLocation();
-  const [openSection, setOpenSection] = useState("mbanking");
+  const navigate = useNavigate(); // ✅ NEW
   const [copied, setCopied] = useState(false);
 
   const {
@@ -51,14 +60,83 @@ export default function Transfer() {
     selectedSlots = [],
     totalPrice = 0,
     totalDurationMinutes = 0,
-    selectedTransferMethod = "bri",
+    selectedTransferMethod = "",
+    vaNumber = "",
+    paymentReference = "",
+    paymentChannel = "",
+    paymentExpiresAt: initialPaymentExpiresAt = Date.now() + 60 * 60 * 1000,
   } = location.state || {};
 
-  const bankLabel = bankLabelMap[selectedTransferMethod] || "BRI";
-  const bankLogo = bankLogoMap[selectedTransferMethod] || briLogo;
+  const isBankMethod = ["bni", "bri", "bsi", "mandiri"].includes(
+    selectedTransferMethod
+  );
+
+  const paymentKind =
+    paymentChannel ||
+    (isBankMethod
+      ? "bank"
+      : selectedTransferMethod === "indomaret"
+      ? "minimarket"
+      : "ewallet");
+
+  const paymentCode = vaNumber || paymentReference || "-";
+  const bankLabel = bankLabelMap[selectedTransferMethod] || "Pembayaran";
+  const paymentLogo = paymentLogoMap[selectedTransferMethod] || null;
   const totalPayment = rupiah(totalPrice);
 
-  const vaNumber = "112 0893 4175 08745";
+  const paymentLabel =
+    paymentKind === "bank"
+      ? "Nomor Virtual Account"
+      : paymentKind === "minimarket"
+      ? "Kode Pembayaran Indomaret"
+      : "Kode Pembayaran E-Wallet";
+
+  const paymentGuideTitle =
+    paymentKind === "minimarket"
+      ? "Petunjuk Pembayaran Indomaret"
+      : "Petunjuk Pembayaran E-Wallet";
+
+  const paymentGuideIcon = paymentKind === "minimarket" ? Landmark : Smartphone;
+
+  // ✅ NEW: prefix VA asli per bank
+  const BANK_PREFIX = {
+    bni: "009",
+    bri: "002",
+    mandiri: "008",
+    bsi: "451",
+  };
+
+  // ✅ NEW: ubah nomor WhatsApp jadi angka saja
+  const normalizePhone = (value = "") =>
+    String(value).replace(/\D/g, "").replace(/^0+/, "");
+
+  const [openSection, setOpenSection] = useState(
+    paymentKind === "bank" ? "mbanking" : "bayar"
+  );
+
+  useEffect(() => {
+    setOpenSection(paymentKind === "bank" ? "mbanking" : "bayar");
+  }, [paymentKind]);
+
+  const [timeLeft, setTimeLeft] = useState(() =>
+    Math.max(0, initialPaymentExpiresAt - Date.now())
+  );
+
+  useEffect(() => {
+    const tick = () => {
+      setTimeLeft(Math.max(0, initialPaymentExpiresAt - Date.now()));
+    };
+
+    tick();
+    const id = setInterval(tick, 1000);
+
+    return () => clearInterval(id);
+  }, [initialPaymentExpiresAt]);
+
+  const pad2 = (num) => String(num).padStart(2, "0");
+  const hours = pad2(Math.floor(timeLeft / 3600000));
+  const minutes = pad2(Math.floor((timeLeft % 3600000) / 60000));
+  const seconds = pad2(Math.floor((timeLeft % 60000) / 1000));
 
   const detailItems = useMemo(
     () => [
@@ -76,8 +154,10 @@ export default function Transfer() {
               }
             )
           : "-",
-        subvalue: selectedSlots?.[0]
-          ? `${selectedSlots[0].jam_mulai.slice(0, 5)} - ${selectedSlots[0].jam_selesai.slice(0, 5)}`
+        subvalue: selectedSlots?.[0]?.jam_mulai
+          ? `${String(selectedSlots[0].jam_mulai).slice(0, 5)} - ${String(
+              selectedSlots[0].jam_selesai || ""
+            ).slice(0, 5)}`
           : "",
       },
       {
@@ -92,7 +172,7 @@ export default function Transfer() {
         icon: Clock3,
         title: "Durasi Bermain",
         value: totalDurationMinutes
-          ? `${totalDurationMinutes / 60} Jam`
+          ? `${Math.ceil(totalDurationMinutes / 60)} Jam`
           : "-",
         subvalue: "",
       },
@@ -106,129 +186,206 @@ export default function Transfer() {
     [field, selectedSlots, totalDurationMinutes]
   );
 
-  const instructions = {
-    mbanking: [
-      {
-        num: 1,
-        text: (
-          <>
-            masuk ke menu <b>Mobile Banking BRI</b>. Kemudian, pilih{" "}
-            <b>Pembayaran &gt; BRIVA</b>
-          </>
-        ),
-      },
-      {
-        num: 2,
-        text: (
-          <>
-            Masukkan <b>Nomor BRIVA</b>{" "}
-            <span className="font-semibold text-red-500">{vaNumber}</span>
-          </>
-        ),
-      },
-      {
-        num: 3,
-        text: (
-          <>
-            Masukkan <b>PIN Anda</b> kemudian pilih <b>Send</b>. Apabila pesan
-            konfirmasi untuk transaksi menggunakan SMS muncul, pilih <b>OK</b>.
-            Status transaksi akan dikirimkan melalui SMS dan dapat digunakan
-            sebagai bukti pembayaran
-          </>
-        ),
-      },
-    ],
-    atm: [
-      {
-        num: 1,
-        text: (
-          <>
-            Masukkan kartu ATM, lalu pilih <b>Transaksi Lain</b> /{" "}
-            <b>Pembayaran</b>
-          </>
-        ),
-      },
-      {
-        num: 2,
-        text: (
-          <>
-            Pilih menu <b>BRIVA</b>, lalu masukkan <b>{vaNumber}</b>
-          </>
-        ),
-      },
-      {
-        num: 3,
-        text: (
-          <>
-            Ikuti instruksi pada layar sampai transaksi berhasil, lalu simpan
-            bukti pembayaran
-          </>
-        ),
-      },
-    ],
-    mini: [
-      {
-        num: 1,
-        text: (
-          <>
-            Datangi <b>Mini ATM / EDC BRI</b> terdekat dan pilih menu{" "}
-            <b>Pembayaran</b>
-          </>
-        ),
-      },
-      {
-        num: 2,
-        text: (
-          <>
-            Masukkan <b>Nomor BRIVA</b>{" "}
-            <span className="font-semibold text-red-500">{vaNumber}</span>
-          </>
-        ),
-      },
-      {
-        num: 3,
-        text: (
-          <>
-            Konfirmasi total pembayaran, lalu selesaikan transaksi sesuai
-            petunjuk pada mesin
-          </>
-        ),
-      },
-    ],
-    setor: [
-      {
-        num: 1,
-        text: (
-          <>
-            Kunjungi teller <b>BRI</b> dan informasikan bahwa Anda ingin
-            melakukan pembayaran <b>BRIVA</b>
-          </>
-        ),
-      },
-      {
-        num: 2,
-        text: (
-          <>
-            Berikan <b>Nomor BRIVA</b>{" "}
-            <span className="font-semibold text-red-500">{vaNumber}</span>
-          </>
-        ),
-      },
-      {
-        num: 3,
-        text: (
-          <>
-            Lakukan pembayaran sejumlah <b>{totalPayment}</b> dan simpan
-            struk sebagai bukti
-          </>
-        ),
-      },
-    ],
-  };
+  const instructions = useMemo(() => {
+    if (paymentKind === "bank") {
+      return {
+        mbanking: [
+          {
+            num: 1,
+            text: (
+              <>
+                Masuk ke menu <b>Mobile Banking {bankLabel}</b>. Kemudian,
+                pilih <b>Pembayaran / Virtual Account</b>
+              </>
+            ),
+          },
+          {
+            num: 2,
+            text: (
+              <>
+                Masukkan <b>Nomor Virtual Account</b>{" "}
+                <span className="font-semibold text-red-500">
+                  {paymentCode}
+                </span>
+              </>
+            ),
+          },
+          {
+            num: 3,
+            text: (
+              <>
+                Masukkan <b>PIN Anda</b> kemudian lanjutkan transaksi. Status
+                pembayaran akan diperbarui setelah transfer berhasil
+              </>
+            ),
+          },
+        ],
+        atm: [
+          {
+            num: 1,
+            text: (
+              <>
+                Masukkan kartu ATM, lalu pilih <b>Transaksi Lain</b> /{" "}
+                <b>Pembayaran</b>
+              </>
+            ),
+          },
+          {
+            num: 2,
+            text: (
+              <>
+                Pilih menu <b>Virtual Account</b>, lalu masukkan{" "}
+                <b>{paymentCode}</b>
+              </>
+            ),
+          },
+          {
+            num: 3,
+            text: (
+              <>
+                Ikuti instruksi pada layar sampai transaksi berhasil, lalu simpan
+                bukti pembayaran
+              </>
+            ),
+          },
+        ],
+        mini: [
+          {
+            num: 1,
+            text: (
+              <>
+                Datangi <b>Mini ATM / EDC</b> terdekat dan pilih menu{" "}
+                <b>Pembayaran</b>
+              </>
+            ),
+          },
+          {
+            num: 2,
+            text: (
+              <>
+                Masukkan <b>Nomor Virtual Account</b>{" "}
+                <span className="font-semibold text-red-500">
+                  {paymentCode}
+                </span>
+              </>
+            ),
+          },
+          {
+            num: 3,
+            text: (
+              <>
+                Konfirmasi total pembayaran, lalu selesaikan transaksi sesuai
+                petunjuk pada mesin
+              </>
+            ),
+          },
+        ],
+        setor: [
+          {
+            num: 1,
+            text: (
+              <>
+                Kunjungi teller <b>{bankLabel}</b> dan informasikan bahwa Anda
+                ingin melakukan pembayaran <b>Virtual Account</b>
+              </>
+            ),
+          },
+          {
+            num: 2,
+            text: (
+              <>
+                Berikan <b>Nomor Virtual Account</b>{" "}
+                <span className="font-semibold text-red-500">
+                  {paymentCode}
+                </span>
+              </>
+            ),
+          },
+          {
+            num: 3,
+            text: (
+              <>
+                Lakukan pembayaran sejumlah <b>{totalPayment}</b> dan simpan
+                struk sebagai bukti
+              </>
+            ),
+          },
+        ],
+      };
+    }
+
+    if (paymentKind === "minimarket") {
+      return {
+        bayar: [
+          {
+            num: 1,
+            text: (
+              <>
+                Datangi gerai <b>Indomaret</b> terdekat.
+              </>
+            ),
+          },
+          {
+            num: 2,
+            text: (
+              <>
+                Berikan <b>kode pembayaran</b>{" "}
+                <span className="font-semibold text-red-500">
+                  {paymentCode}
+                </span>
+              </>
+            ),
+          },
+          {
+            num: 3,
+            text: (
+              <>
+                Lakukan pembayaran sesuai nominal, lalu simpan struk sebagai
+                bukti.
+              </>
+            ),
+          },
+        ],
+      };
+    }
+
+    return {
+      bayar: [
+        {
+          num: 1,
+          text: (
+            <>
+              Buka aplikasi <b>{bankLabel}</b> yang dipilih.
+            </>
+          ),
+        },
+        {
+          num: 2,
+          text: (
+            <>
+              Masukkan atau scan <b>kode pembayaran</b>{" "}
+              <span className="font-semibold text-red-500">
+                {paymentCode}
+              </span>
+            </>
+          ),
+        },
+        {
+          num: 3,
+          text: (
+            <>
+              Selesaikan pembayaran lalu simpan bukti transaksi.
+            </>
+          ),
+        },
+      ],
+    };
+  }, [bankLabel, paymentCode, paymentKind, totalPayment]);
 
   const copyVA = async () => {
     try {
-      await navigator.clipboard.writeText("1120893417508745");
+      if (!paymentCode || paymentCode === "-") return;
+      await navigator.clipboard.writeText(paymentCode);
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     } catch {
@@ -319,11 +476,11 @@ export default function Transfer() {
 
                 <div className="flex-1">
                   <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center text-center text-[30px] font-extrabold leading-none text-[#d97706]">
-                    <span>00</span>
+                    <span>{hours}</span>
                     <span className="px-1">:</span>
-                    <span>00</span>
+                    <span>{minutes}</span>
                     <span className="px-1">:</span>
-                    <span>00</span>
+                    <span>{seconds}</span>
                   </div>
 
                   <div className="mt-2 grid grid-cols-3 text-center text-[15px] text-[#000]">
@@ -343,10 +500,10 @@ export default function Transfer() {
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <p className="mb-2 text-[13px] font-semibold uppercase tracking-[0.12em] text-[#9a9a9a]">
-                    Nomor Virtual Account
+                    {paymentLabel}
                   </p>
                   <div className="text-[26px] font-extrabold leading-tight tracking-[0.04em] text-[#2d7e39]">
-                    {vaNumber}
+                    {paymentCode}
                   </div>
                   <div className="mt-3 inline-flex items-center rounded-full border border-[#f5b8b3] bg-[#fff5f4] px-3.5 py-1 text-[12px] font-semibold tracking-wide text-[#d63a31]">
                     ● Belum Bayar
@@ -357,7 +514,7 @@ export default function Transfer() {
                   type="button"
                   onClick={copyVA}
                   className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-[14px] border border-[#e0e0e0] bg-[#f7f7f5] shadow-[0_2px_8px_rgba(0,0,0,0.08)] transition-all hover:bg-[#ececec] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] active:scale-95"
-                  aria-label="Copy virtual account"
+                  aria-label="Copy payment code"
                 >
                   <Copy className="h-5 w-5 text-[#27275f]" />
                 </button>
@@ -391,11 +548,13 @@ export default function Transfer() {
                 </div>
 
                 <div className="hidden min-w-[150px] items-center justify-center rounded-[16px] bg-white px-6 py-5 shadow-none sm:flex">
-                  <img
-                    src={bankLogo}
-                    alt={bankLabel}
-                    className="h-[130px] w-auto max-w-[170px] object-contain"
-                  />
+                  {paymentLogo ? (
+                    <img
+                      src={paymentLogo}
+                      alt={bankLabel}
+                      className="h-[130px] w-auto max-w-[170px] object-contain"
+                    />
+                  ) : null}
                 </div>
               </div>
 
@@ -408,7 +567,8 @@ export default function Transfer() {
                     Pembayaran Aman
                   </p>
                   <p className="text-[12px] leading-snug text-[#5a7d5e]">
-                    Data Anda aman · Diverifikasi otomatis setelah transfer berhasil
+                    Data Anda aman · Diverifikasi otomatis setelah pembayaran
+                    berhasil
                   </p>
                 </div>
               </div>
@@ -418,30 +578,41 @@ export default function Transfer() {
             <div className="py-1" />
 
             <div className="divide-y divide-[#f0f0f0] px-2 pb-2">
-              <Section
-                id="mbanking"
-                title="Petunjuk Transfer mBanking"
-                icon={Smartphone}
-                items={instructions.mbanking}
-              />
-              <Section
-                id="atm"
-                title="Petunjuk Transfer ATM"
-                icon={Landmark}
-                items={instructions.atm}
-              />
-              <Section
-                id="mini"
-                title="Petunjuk Transfer Mini ATM / EDC"
-                icon={Building2}
-                items={instructions.mini}
-              />
-              <Section
-                id="setor"
-                title="Petunjuk Transfer Setor Tunai"
-                icon={Banknote}
-                items={instructions.setor}
-              />
+              {paymentKind === "bank" ? (
+                <>
+                  <Section
+                    id="mbanking"
+                    title="Petunjuk Transfer mBanking"
+                    icon={Smartphone}
+                    items={instructions.mbanking}
+                  />
+                  <Section
+                    id="atm"
+                    title="Petunjuk Transfer ATM"
+                    icon={Landmark}
+                    items={instructions.atm}
+                  />
+                  <Section
+                    id="mini"
+                    title="Petunjuk Transfer Mini ATM / EDC"
+                    icon={Building2}
+                    items={instructions.mini}
+                  />
+                  <Section
+                    id="setor"
+                    title="Petunjuk Transfer Setor Tunai"
+                    icon={Banknote}
+                    items={instructions.setor}
+                  />
+                </>
+              ) : (
+                <Section
+                  id="bayar"
+                  title={paymentGuideTitle}
+                  icon={paymentGuideIcon}
+                  items={instructions.bayar}
+                />
+              )}
             </div>
           </div>
 
@@ -475,6 +646,14 @@ export default function Transfer() {
                 );
               })}
             </div>
+            {/* ✅ NEW: tombol ke halaman pesanan */}
+            <button
+              type="button"
+              onClick={() => navigate("/pesanan")}
+              className="mt-8 flex w-full items-center justify-center rounded-[16px] bg-[#2a7f30] px-4 py-3 text-[15px] font-semibold text-white shadow-[0_6px_14px_rgba(0,0,0,0.08)] transition hover:brightness-95 active:scale-[0.99] md:text-[16px]"
+            >
+              CEK DETAIL PESANAN ANDA
+            </button>
           </div>
         </div>
       </div>
@@ -486,7 +665,7 @@ export default function Transfer() {
             : "pointer-events-none translate-y-3 opacity-0"
         }`}
       >
-        Nomor VA berhasil disalin
+        Kode pembayaran berhasil disalin
       </div>
     </div>
   );

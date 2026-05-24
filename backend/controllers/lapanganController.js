@@ -1,8 +1,9 @@
 // controllers/lapanganController.js
-
 const { Lapangan, Review } = require("../models");
+const Jadwal = require("../models/jadwal");
 const { Op } = require("sequelize");
 
+// ✅ NEW: ambil semua lapangan
 exports.getAll = async (req, res) => {
   try {
     const { tipe, lokasi } = req.query;
@@ -13,7 +14,7 @@ exports.getAll = async (req, res) => {
 
     const lapangan = await Lapangan.findAll({
       where,
-      order: [["createdAt", "DESC"]],
+      order: [["id", "DESC"]],
     });
 
     const result = await Promise.all(
@@ -37,8 +38,114 @@ exports.getAll = async (req, res) => {
       })
     );
 
-    res.json(result);
+    return res.json(result);
   } catch (err) {
-    res.status(500).json({ msg: "Server error", error: err.message });
+    return res.status(500).json({
+      msg: "Server error",
+      error: err.message,
+    });
+  }
+};
+
+// ✅ NEW: ambil lapangan by id
+exports.getById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const data = await Lapangan.findByPk(id);
+    if (!data) {
+      return res.status(404).json({
+        message: "Lapangan tidak ditemukan",
+      });
+    }
+
+    const courtRows = await Jadwal.findAll({
+      where: { lapangan_id: id },
+      attributes: ["court_no"],
+      group: ["court_no"],
+      order: [["court_no", "ASC"]],
+    });
+
+    const courts = courtRows.length
+      ? courtRows.map((row) => `Lapangan ${row.court_no}`)
+      : ["Lapangan 1"];
+
+    return res.json({
+      ...data.toJSON(),
+      courts,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      message: "Gagal mengambil detail lapangan",
+      error: err.message,
+    });
+  }
+};
+
+// ✅ NEW: create lapangan
+exports.create = async (req, res) => {
+  try {
+    const data = await Lapangan.create(req.body);
+
+    return res.status(201).json({
+      message: "Lapangan berhasil ditambahkan",
+      data,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      message: "Gagal menambah lapangan",
+      error: err.message,
+    });
+  }
+};
+
+// ✅ NEW: update lapangan
+exports.update = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const data = await Lapangan.findByPk(id);
+    if (!data) {
+      return res.status(404).json({
+        message: "Lapangan tidak ditemukan",
+      });
+    }
+
+    await data.update(req.body);
+
+    return res.json({
+      message: "Lapangan berhasil diperbarui",
+      data,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      message: "Gagal memperbarui lapangan",
+      error: err.message,
+    });
+  }
+};
+
+// ✅ NEW: hapus lapangan
+exports.remove = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const data = await Lapangan.findByPk(id);
+    if (!data) {
+      return res.status(404).json({
+        message: "Lapangan tidak ditemukan",
+      });
+    }
+
+    await data.destroy();
+
+    return res.json({
+      message: "Lapangan berhasil dihapus",
+    });
+  } catch (err) {
+    return res.status(500).json({
+      message: "Gagal menghapus lapangan",
+      error: err.message,
+    });
   }
 };

@@ -1,12 +1,20 @@
-// controllers/authController.js
 const axios = require("axios");
-const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/user");
 require("dotenv").config();
 
+// ✅ NEW: blacklist refresh token sementara (untuk development / single instance)
+const blacklistedRefreshTokens = new Set();
 
+// ✅ NEW: secure cookie config untuk refresh token
+const refreshCookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 hari
+  path: "/",
+};
 
 function waitSessionSave(req) {
   return new Promise((resolve, reject) => {
@@ -36,6 +44,174 @@ function normalizeWhatsAppNumber(phone = "") {
   const digits = String(phone).replace(/\D/g, "");
   return digits.startsWith("62") ? digits : `62${digits.replace(/^0+/, "")}`;
 }
+
+function maskPhone(phone = "") {
+  const s = String(phone);
+  if (s.length <= 6) return s;
+  return `${s.slice(0, 4)}****${s.slice(-2)}`;
+}
+
+// ACCSES TOKEN
+const VALID_ROLES = ["user", "mitra", "admin"];
+function createAccessToken(user) {
+  return jwt.sign(
+    { id: user.id, role: user.role },
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_EXPIRES || "15m" }
+  );
+}
+
+// REFRESH TOKEN
+function createRefreshToken(user) {
+  return jwt.sign(
+    { id: user.id, role: user.role },
+    process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_REFRESH_EXPIRES || "7d" }
+  );
+}
+
+function toUserPayload(user) {
+  return {
+    id: user.id,
+    nama: user.nama,
+    no_hp: user.no_hp,
+    email: user.email,
+    role: user.role,
+  };
+}
+
+function validatePasswordStrength(password, nama, email) {
+  const pw = password || "";
+  const name = (nama || "").trim().toLowerCase();
+  const mail = (email || "").trim().toLowerCase();
+  const emailPrefix = mail.includes("@") ? mail.split("@")[0] : "";
+
+  if (pw.length < 8) {
+    return "Password minimal 8 karakter";
+  }
+
+  if (!/[A-Z]/.test(pw)) {
+    return "Password harus memiliki minimal 1 huruf besar";
+  }
+
+  if (!/[0-9]/.test(pw)) {
+    return "Password harus memiliki minimal 1 angka";
+  }
+
+  if (!/[^A-Za-z0-9]/.test(pw)) {
+    return "Password harus memiliki minimal 1 simbol";
+  }
+
+  if (name && pw.toLowerCase().includes(name)) {
+    return "Password tidak boleh mengandung nama";
+  }
+
+  if (emailPrefix && pw.toLowerCase().includes(emailPrefix)) {
+    return "Password tidak boleh mengandung email";
+  }
+
+  return null;
+}
+
+function validateRegisterFields({ nama, no_hp, email, password }) {
+  const name = (nama || "").trim();
+  const phone = (no_hp || "").trim();
+  const mail = (email || "").trim().toLowerCase();
+  const pw = password || "";
+
+  if (!name) return "Nama wajib diisi";
+  if (name.length < 3) return "Nama minimal 3 karakter";
+  if (name.length > 50) return "Nama maksimal 50 karakter";
+
+  if (!phone) return "Nomor HP wajib diisi";
+  if (!/^[0-9+\-\s]{8,20}$/.test(phone)) {
+    return "Format nomor tidak valid";
+  }
+
+  if (!mail) return "Email wajib diisi";
+  if (!/\S+@\S+\.\S+/.test(mail)) {
+    return "Format email tidak valid";
+  }
+  if (mail.length > 254) return "Email terlalu panjang";
+
+  if (!pw) return "Password wajib diisi";
+  if (pw.length < 8) return "Password minimal 8 karakter";
+  if (pw.length > 128) return "Password maksimal 128 karakter";
+  if (!/[A-Z]/.test(pw)) return "Password harus memiliki minimal 1 huruf besar";
+  if (!/[0-9]/.test(pw)) return "Password harus memiliki minimal 1 angka";
+  if (!/[^A-Za-z0-9]/.test(pw)) return "Password harus memiliki minimal 1 simbol";
+
+  const emailPrefix = mail.split("@")[0] || "";
+  if (name && pw.toLowerCase().includes(name.toLowerCase())) {
+    return "Password tidak boleh mengandung nama";
+  }
+  if (emailPrefix && pw.toLowerCase().includes(emailPrefix)) {
+    return "Password tidak boleh mengandung email";
+  }
+
+  return null;
+}
+
+// ✅ NEW: verify Google reCAPTCHA di backend
+async function verifyRecaptcha(captchaToken) {
+  if (!captchaToken) {
+    return {
+      ok: false,
+      message: "Captcha wajib diselesaikan",
+    };
+  }
+
+  if (!process.env.RECAPTCHA_SECRET_KEY) {
+    return {
+      ok: false,
+      message: "RECAPTCHA_SECRET_KEY belum diisi",
+    };
+  }
+
+  try {
+    const params = new URLSearchParams();
+    params.append("secret", process.env.RECAPTCHA_SECRET_KEY);
+    params.append("response", captchaToken);
+
+    const recaptchaRes = await axios.post(
+      "https://www.google.com/recaptcha/api/siteverify",
+      params,
+      {
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      }
+    );
+
+    if (!recaptchaRes.data?.success) {
+      return {
+        ok: false,
+        message: "Verifikasi captcha gagal",
+      };
+    }
+
+    return { ok: true };
+  } catch (err) {
+    return {
+      ok: false,
+      message:
+        err.response?.data?.["error-codes"]?.join(", ") ||
+        "Verifikasi captcha gagal",
+    };
+  }
+}
+
+// ✅ NEW: endpoint lama tetap ada, tapi sekarang hanya legacy
+exports.getCaptcha = (req, res) => {
+  const a = Math.floor(Math.random() * 9) + 1;
+  const b = Math.floor(Math.random() * 9) + 1;
+
+  req.session.captchaAnswer = String(a + b);
+
+  return res.json({
+    question: `Berapa hasil ${a} + ${b} ?`,
+  });
+};
 
 exports.sendOtp = async (req, res) => {
   try {
@@ -173,13 +349,7 @@ exports.verifyOtp = async (req, res) => {
     return res.json({
       message: "Verifikasi berhasil. Silakan login.",
       msg: "Verifikasi berhasil. Silakan login.",
-      user: {
-        id: user.id,
-        nama: user.nama,
-        no_hp: user.no_hp,
-        email: user.email,
-        role: user.role,
-      },
+      user: toUserPayload(user),
     });
   } catch (err) {
     console.error("VERIFY OTP ERROR:", err);
@@ -191,119 +361,15 @@ exports.verifyOtp = async (req, res) => {
   }
 };
 
-const VALID_ROLES = ["user", "mitra", "admin"];
-
-function createToken(user) {
-  return jwt.sign(
-    { id: user.id, role: user.role },
-    process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES || "15m" }
-  );
-}
-
-function validatePasswordStrength(password, nama, email) {
-  const pw = password || "";
-  const name = (nama || "").trim().toLowerCase();
-  const mail = (email || "").trim().toLowerCase();
-  const emailPrefix = mail.includes("@") ? mail.split("@")[0] : "";
-
-  if (pw.length < 8) {
-    return "Password minimal 8 karakter";
-  }
-
-  if (!/[A-Z]/.test(pw)) {
-    return "Password harus memiliki minimal 1 huruf besar";
-  }
-
-  if (!/[0-9]/.test(pw)) {
-    return "Password harus memiliki minimal 1 angka";
-  }
-
-  if (!/[^A-Za-z0-9]/.test(pw)) {
-    return "Password harus memiliki minimal 1 simbol";
-  }
-
-  if (name && pw.toLowerCase().includes(name)) {
-    return "Password tidak boleh mengandung nama";
-  }
-
-  if (emailPrefix && pw.toLowerCase().includes(emailPrefix)) {
-    return "Password tidak boleh mengandung email";
-  }
-
-  return null;
-}
-
-
-function validateRegisterFields({ nama, no_hp, email, password }) {
-  const name = (nama || "").trim();
-  const phone = (no_hp || "").trim();
-  const mail = (email || "").trim().toLowerCase();
-  const pw = password || "";
-
-  if (!name) return "Nama wajib diisi";
-  if (name.length < 3) return "Nama minimal 3 karakter";
-  if (name.length > 50) return "Nama maksimal 50 karakter";
-  // if (!/^[A-Za-z0-9_-]+$/.test(name)) {
-  //   return "Nama hanya boleh huruf, angka, underscore, dan strip";
-  // }
-
-  if (!phone) return "Nomor HP wajib diisi";
-  if (!/^[0-9+\-\s]{8,20}$/.test(phone)) {
-    return "Format nomor tidak valid";
-  }
-
-  if (!mail) return "Email wajib diisi";
-  if (!/\S+@\S+\.\S+/.test(mail)) {
-    return "Format email tidak valid";
-  }
-  if (mail.length > 254) return "Email terlalu panjang";
-
-  if (!pw) return "Password wajib diisi";
-  if (pw.length < 8) return "Password minimal 8 karakter";
-  if (pw.length > 128) return "Password maksimal 128 karakter";
-  if (!/[A-Z]/.test(pw)) return "Password harus memiliki minimal 1 huruf besar";
-  if (!/[0-9]/.test(pw)) return "Password harus memiliki minimal 1 angka";
-  if (!/[^A-Za-z0-9]/.test(pw)) return "Password harus memiliki minimal 1 simbol";
-
-  const emailPrefix = mail.split("@")[0] || "";
-  if (name && pw.toLowerCase().includes(name.toLowerCase())) {
-    return "Password tidak boleh mengandung nama";
-  }
-  if (emailPrefix && pw.toLowerCase().includes(emailPrefix)) {
-    return "Password tidak boleh mengandung email";
-  }
-
-  return null;
-}
-
-exports.getCaptcha = (req, res) => {
-  const a = Math.floor(Math.random() * 9) + 1;
-  const b = Math.floor(Math.random() * 9) + 1;
-
-  req.session.captchaAnswer = String(a + b);
-
-  return res.json({
-    question: `Berapa hasil ${a} + ${b} ?`,
-  });
-};
-
-function maskPhone(phone = "") {
-  const s = String(phone);
-  if (s.length <= 6) return s;
-  return `${s.slice(0, 4)}****${s.slice(-2)}`;
-}
-
 // REGISTER
 exports.register = async (req, res) => {
   try {
-    const { nama, no_hp, email, password } = req.body;
+    const { nama, no_hp, email, password, captchaToken } = req.body;
 
     const namaClean = (nama || "").trim();
     const noHpClean = normalizeE164(no_hp || "");
     const emailClean = (email || "").trim().toLowerCase();
     const passwordClean = password || "";
-    const captchaAnswer = String(req.body.captchaAnswer || "").trim();
 
     if (!namaClean || !noHpClean || !emailClean || !passwordClean) {
       return res.status(400).json({
@@ -339,14 +405,14 @@ exports.register = async (req, res) => {
       });
     }
 
-    if (!req.session?.captchaAnswer || captchaAnswer !== req.session.captchaAnswer) {
+    // ✅ NEW: verifikasi Google reCAPTCHA
+    const captchaCheck = await verifyRecaptcha(captchaToken);
+    if (!captchaCheck.ok) {
       return res.status(400).json({
-        message: "Jawaban CAPTCHA salah",
-        msg: "Jawaban CAPTCHA salah",
+        message: captchaCheck.message,
+        msg: captchaCheck.message,
       });
     }
-
-    req.session.captchaAnswer = null;
 
     const existing = await User.findOne({ where: { email: emailClean } });
     if (existing) {
@@ -383,21 +449,20 @@ exports.register = async (req, res) => {
       });
     });
   } catch (err) {
-  console.error("REGISTER ERROR:", err);
-  return res.status(500).json({
-    message: "Server error",
-    msg: "Server error",
-    error: err.message,
-  });
-}
+    console.error("REGISTER ERROR:", err);
+    return res.status(500).json({
+      message: "Server error",
+      msg: "Server error",
+      error: err.message,
+    });
+  }
 };
 
-// LOGIN
+//Controller memproses data dan validasi
 exports.login = async (req, res) => {
   try {
     const { email, password, role } = req.body;
     const loginRole = VALID_ROLES.includes(role) ? role : "user";
-
     const emailClean = (email || "").trim().toLowerCase();
 
     if (!emailClean || !password) {
@@ -406,14 +471,12 @@ exports.login = async (req, res) => {
         msg: "Email dan password wajib diisi",
       });
     }
-
     if (!/\S+@\S+\.\S+/.test(emailClean)) {
       return res.status(400).json({
         message: "Format email tidak valid",
         msg: "Format email tidak valid",
       });
     }
-
     const user = await User.findOne({ where: { email: emailClean } });
 
     if (!user) {
@@ -438,19 +501,19 @@ exports.login = async (req, res) => {
       });
     }
 
-    const token = createToken(user);
+    // JWT DIKIRM SAAT LOGIN
 
+    const accessToken = createAccessToken(user);
+    const refreshToken = createRefreshToken(user);
+    // set refresh token ke HttpOnly Cookie
+    res.cookie("refreshToken", refreshToken, refreshCookieOptions);
+    // kirim access token saja ke frontend
     return res.json({
       message: "Login berhasil",
       msg: "Login berhasil",
-      token,
-      user: {
-        id: user.id,
-        nama: user.nama,
-        no_hp: user.no_hp,
-        email: user.email,
-        role: user.role,
-      },
+      token: accessToken,
+      accessToken,
+      user: toUserPayload(user),
     });
   } catch (err) {
     return res.status(500).json({
@@ -460,3 +523,138 @@ exports.login = async (req, res) => {
     });
   }
 };
+
+// AUTH VERIFY
+exports.verifyAuth = async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader?.startsWith("Bearer ")) {
+      return res.status(401).json({
+        message: "Token tidak ditemukan",
+        msg: "Token tidak ditemukan",
+      });
+    }
+
+    const token = authHeader.split(" ")[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    const user = await User.findByPk(decoded.id);
+    if (!user) {
+      return res.status(404).json({
+        message: "User tidak ditemukan",
+        msg: "User tidak ditemukan",
+      });
+    }
+
+    return res.json({
+      message: "Token valid",
+      msg: "Token valid",
+      user: toUserPayload(user),
+    });
+  } catch (err) {
+    return res.status(401).json({
+      message: "Token expired atau tidak valid",
+      msg: "Token expired atau tidak valid",
+      error: err.message,
+    });
+  }
+};
+
+// REFRESH TOKEN
+exports.refreshToken = async (req, res) => {
+  try {
+    // ✅ NEW: ambil refresh token dari cookie
+    const refreshToken = req.cookies?.refreshToken;
+
+    if (!refreshToken) {
+      return res.status(401).json({
+        message: "Refresh token tidak ditemukan",
+        msg: "Refresh token tidak ditemukan",
+      });
+    }
+
+    if (blacklistedRefreshTokens.has(refreshToken)) {
+      return res.status(401).json({
+        message: "Refresh token sudah tidak valid",
+        msg: "Refresh token sudah tidak valid",
+      });
+    }
+
+    const decoded = jwt.verify(
+      refreshToken,
+      process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET
+    );
+
+    const user = await User.findByPk(decoded.id);
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User tidak ditemukan",
+        msg: "User tidak ditemukan",
+      });
+    }
+
+    // ✅ NEW: rotation refresh token
+    blacklistedRefreshTokens.add(refreshToken);
+
+    const newAccessToken = createAccessToken(user);
+    const newRefreshToken = createRefreshToken(user);
+
+    // ✅ NEW: replace cookie refresh lama
+    res.cookie("refreshToken", newRefreshToken, refreshCookieOptions);
+
+    return res.json({
+      message: "Token berhasil diperbarui",
+      msg: "Token berhasil diperbarui",
+      token: newAccessToken,
+      accessToken: newAccessToken,
+      user: toUserPayload(user),
+    });
+  } catch (err) {
+    return res.status(401).json({
+      message: "Refresh token tidak valid",
+      msg: "Refresh token tidak valid",
+      error: err.message,
+    });
+  }
+};
+
+// LOGOUT
+exports.logout = async (req, res) => {
+  try {
+    const refreshToken = req.cookies?.refreshToken;
+
+    if (refreshToken) {
+      blacklistedRefreshTokens.add(refreshToken);
+    }
+
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      path: "/",
+    });
+
+    return res.json({
+      message: "Logout berhasil",
+      msg: "Logout berhasil",
+    });
+  } catch (err) {
+    return res.status(500).json({
+      message: "Gagal logout",
+      msg: "Gagal logout",
+      error: err.message,
+    });
+  }
+};
+
+
+
+
+
+
+
+
+
+

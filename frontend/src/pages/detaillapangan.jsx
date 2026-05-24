@@ -2,6 +2,7 @@
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
 import Footer from "../components/Footer";
+import { api } from "../services/api";
 import {
   FaCar,
   FaMotorcycle,
@@ -131,7 +132,10 @@ function PhotoGallery({ photos, name }) {
 function CekJadwal({ field, slotGridRef, initialSelectedSlots = [], initialOpenBookingBox = false }) {
   const weekDays = getWeekDays();
   const navigate = useNavigate();
-  const courts = Array.isArray(field.courts) ? field.courts : [];
+  const courts =
+  Array.isArray(field.courts) && field.courts.length > 0
+    ? field.courts
+    : ["Lapangan 1"];
   const hasMultipleCourts = courts.length > 1;
 
   const [selectedDayIdx, setSelectedDayIdx] = useState(0);
@@ -162,37 +166,35 @@ function CekJadwal({ field, slotGridRef, initialSelectedSlots = [], initialOpenB
       close: field.jam_tutup,
     };
 
-    useEffect(() => {
-    const fetchJadwal = async () => {
-      try {
-        setLoadingJadwal(true);
+   useEffect(() => {
+  const fetchJadwal = async () => {
+    try {
+      setLoadingJadwal(true);
 
-        const params = new URLSearchParams();
-        params.append("lapangan_id", field.id);
-        params.append("tanggal", selectedDate);
+      const params = new URLSearchParams();
+      params.append("lapangan_id", field.id);
+      params.append("tanggal", selectedDate);
 
-        if (selectedCourtNo) {
-          params.append("court_no", selectedCourtNo);
-        }
-
-        const res = await fetch(
-          `http://localhost:5000/api/jadwal?${params.toString()}`
-        );
-
-        const data = await res.json();
-        setJadwalData(Array.isArray(data) ? data : []);
-      } catch (error) {
-        console.error("Gagal ambil jadwal:", error);
-        setJadwalData([]);
-      } finally {
-        setLoadingJadwal(false);
+      if (selectedCourtNo) {
+        params.append("court_no", selectedCourtNo);
       }
-    };
 
-    if (field?.id && selectedDate) {
-      fetchJadwal();
+      const res = await api.get(`/jadwal?${params.toString()}`);
+      const data = res.data;
+
+      setJadwalData(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("Gagal ambil jadwal:", error);
+      setJadwalData([]);
+    } finally {
+      setLoadingJadwal(false);
     }
-  }, [field?.id, selectedCourtNo, selectedDate]);
+  };
+
+  if (field?.id && selectedDate) {
+    fetchJadwal();
+  }
+}, [field?.id, selectedCourtNo, selectedDate]);
 
   function handleDayChange(idx) {
     setSelectedDayIdx(idx);
@@ -426,55 +428,64 @@ function CekJadwal({ field, slotGridRef, initialSelectedSlots = [], initialOpenB
                   }}
                 >
                   <button
-                    onClick={() => {
-                      setSelectedCourt("Semua Lapangan");
-                      setCourtDropOpen(false);
-                      setSelectedSlots([]);
-                    }}
-                    style={{
-                      display: "block",
-                      width: "100%",
-                      textAlign: "left",
-                      padding: "12px 16px",
-                      border: "none",
-                      cursor: "pointer",
-                      fontSize: 13,
-                      fontWeight: selectedCourt === "Semua Lapangan" ? 700 : 500,
-                      background: selectedCourt === "Semua Lapangan" ? "#f0fdf4" : "#fff",
-                      color: selectedCourt === "Semua Lapangan" ? "#15803d" : "#374151",
-                      fontFamily: "'Plus Jakarta Sans', sans-serif",
-                    }}
-                  >
-                    {selectedCourt === "Semua Lapangan" && <span style={{ marginRight: 6 }}>✓</span>}
-                    Semua Lapangan
-                  </button>
+  onClick={() => {
+    setSelectedCourt("Semua Lapangan");
+    setCourtDropOpen(false);
+    setSelectedSlots([]);
+  }}
+  style={{
+    display: "block",
+    width: "100%",
+    textAlign: "left",
+    padding: "12px 16px",
+    border: "none",
+    cursor: "pointer",
+    fontSize: 13,
+    fontWeight: selectedCourt === "Semua Lapangan" ? 700 : 500,
+    background: selectedCourt === "Semua Lapangan" ? "#f0fdf4" : "#fff",
+    color: selectedCourt === "Semua Lapangan" ? "#15803d" : "#374151",
+    fontFamily: "'Plus Jakarta Sans', sans-serif",
+  }}
+>
+  {selectedCourt === "Semua Lapangan" && <span style={{ marginRight: 6 }}>✓</span>}
+  Semua Lapangan
+</button>
 
-                  {courts.map((c) => (
-                    <button
-                      key={c}
-                      onClick={() => {
-                        setSelectedCourt(c);
-                        setCourtDropOpen(false);
-                        setSelectedSlots([]);
-                      }}
-                      style={{
-                        display: "block",
-                        width: "100%",
-                        textAlign: "left",
-                        padding: "12px 16px",
-                        border: "none",
-                        cursor: "pointer",
-                        fontSize: 13,
-                        fontWeight: c === selectedCourt ? 700 : 500,
-                        background: c === selectedCourt ? "#f0fdf4" : "#fff",
-                        color: c === selectedCourt ? "#15803d" : "#374151",
-                        fontFamily: "'Plus Jakarta Sans', sans-serif",
-                      }}
-                    >
-                      {c === selectedCourt && <span style={{ marginRight: 6 }}>✓</span>}
-                      {c}
-                    </button>
-                  ))}
+                  {courts.map((c, idx) => {
+  const courtLabel =
+    typeof c === "object"
+      ? c.nama || c.label || `Lapangan ${c.court_no || idx + 1}`
+      : c;
+
+  const isActive = courtLabel === selectedCourt;
+
+  return (
+    <button
+      key={courtLabel}
+      onClick={() => {
+        setSelectedCourt(courtLabel);
+        setCourtDropOpen(false);
+        setSelectedSlots([]);
+      }}
+      style={{
+        display: "block",
+        width: "100%",
+        textAlign: "left",
+        padding: "12px 16px",
+        border: "none",
+        cursor: "pointer",
+        fontSize: 13,
+        fontWeight: isActive ? 700 : 500,
+        background: isActive ? "#f0fdf4" : "#fff",
+        color: isActive ? "#15803d" : "#374151",
+        fontFamily: "'Plus Jakarta Sans', sans-serif",
+      }}
+    >
+      {isActive && <span style={{ marginRight: 6 }}>✓</span>}
+      {courtLabel}
+    </button>
+  );
+})}
                 </div>
               )}
             </div>
@@ -1052,22 +1063,65 @@ useEffect(() => {
   }
 }, []);
 useEffect(() => {
-  fetch(`http://localhost:5000/api/lapangan/${id}`)
-    .then(res => res.json())
-    .then(data => {
-  const parsed = {
+  const fetchDetail = async () => {
+    try {
+      const res = await api.get(`/lapangan/${id}`);
+      const data = res.data;
+
+const jumlahLapangan = Number(
+  data.jumlah_lapangan ||
+    data.total_lapangan ||
+    data.court_count ||
+    0
+);
+
+let courts = [];
+
+// kalau API memang sudah mengirim daftar lapangan
+if (Array.isArray(data.courts) && data.courts.length > 0) {
+  courts = data.courts.map((c, index) =>
+    typeof c === "string"
+      ? c
+      : c?.nama || c?.label || c?.name || `Lapangan ${c?.court_no || index + 1}`
+  );
+} else if (Array.isArray(data.lapangan) && data.lapangan.length > 0) {
+  courts = data.lapangan.map((c, index) =>
+    typeof c === "string"
+      ? c
+      : c?.nama || c?.label || c?.name || `Lapangan ${c?.court_no || index + 1}`
+  );
+} else if (jumlahLapangan > 0) {
+  // fallback kalau hanya ada angka jumlah lapangan
+  courts = Array.from({ length: jumlahLapangan }, (_, i) => `Lapangan ${i + 1}`);
+} else {
+  courts = ["Lapangan 1"];
+}
+
+const parsed = {
   ...data,
   foto: data.foto || [],
   fasilitas: data.fasilitas || [],
   hari_operasional: data.hari_operasional || null,
+  courts,
 };
 
-  setField(parsed);
-});
+      setField(parsed);
+    } catch (error) {
+      console.error("Gagal ambil detail lapangan:", error);
+    }
+  };
 
-  fetch(`http://localhost:5000/api/review/${id}`)
-    .then(res => res.json())
-    .then(data => setReviews(data));
+  const fetchReview = async () => {
+    try {
+      const res = await api.get(`/review/${id}`);
+      setReviews(Array.isArray(res.data) ? res.data : []);
+    } catch (error) {
+      console.error("Gagal ambil review:", error);
+    }
+  };
+
+  fetchDetail();
+  fetchReview();
 }, [id]);
 
   if (!field) {

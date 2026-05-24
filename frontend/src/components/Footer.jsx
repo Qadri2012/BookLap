@@ -178,45 +178,6 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* NAVIGASI */}
-          {/* <div>
-            <h5 style={{
-              color: "#fff", fontSize: 12, fontWeight: 700,
-              letterSpacing: "0.15em", textTransform: "uppercase",
-              marginBottom: 20,
-              display: "flex", alignItems: "center", gap: 8,
-            }}>
-              <span style={{ width: 16, height: 2, background: "#16a34a", borderRadius: 2, display: "inline-block" }} />
-              Navigasi
-            </h5>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {navLinks.map(({ to, label }) => (
-                <Link
-                  key={to}
-                  to={to}
-                  style={{
-                    color: "rgba(255,255,255,0.45)",
-                    fontSize: 13.5,
-                    textDecoration: "none",
-                    transition: "all 0.2s",
-                    display: "flex", alignItems: "center", gap: 6,
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.color = "#4ade80";
-                    e.currentTarget.style.transform = "translateX(4px)";
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.color = "rgba(255,255,255,0.45)";
-                    e.currentTarget.style.transform = "translateX(0)";
-                  }}
-                >
-                  <span style={{ color: "#16a34a", fontSize: 10 }}>▶</span>
-                  {label}
-                </Link>
-              ))}
-            </div>
-          </div> */}
-
           {/* LEGAL */}
           <div>
             <h5 style={{

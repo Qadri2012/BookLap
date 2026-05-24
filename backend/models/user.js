@@ -1,6 +1,5 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
-
 const User = sequelize.define(
   "User",
   {
@@ -9,7 +8,6 @@ const User = sequelize.define(
       defaultValue: DataTypes.UUIDV4,
       primaryKey: true,
     },
-
     nama: {
       type: DataTypes.STRING(50),
       allowNull: false,
@@ -17,13 +15,11 @@ const User = sequelize.define(
         notEmpty: true,
       },
     },
-
     no_hp: {
       type: DataTypes.STRING(20),
       allowNull: true,
       defaultValue: "",
     },
-
     email: {
       type: DataTypes.STRING(254),
       allowNull: false,
@@ -32,12 +28,10 @@ const User = sequelize.define(
         isEmail: true,
       },
     },
-
     password: {
       type: DataTypes.STRING,
       allowNull: false,
     },
-
     role: {
       type: DataTypes.ENUM("user", "mitra", "admin"),
       allowNull: false,
@@ -49,5 +43,4 @@ const User = sequelize.define(
     timestamps: false,
   }
 );
-
 module.exports = User;

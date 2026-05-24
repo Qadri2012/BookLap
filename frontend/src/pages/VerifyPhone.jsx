@@ -1,8 +1,6 @@
-// VerifyPhone.jsx
-
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import axios from "axios";
+import { api } from "../services/api";
 
 export default function VerifyPhone() {
   const navigate = useNavigate();
@@ -17,46 +15,64 @@ export default function VerifyPhone() {
       setLoading(true);
       setError("");
 
-      await axios.post(
-        "http://localhost:5000/api/auth/send-otp",
-        {},
-        { withCredentials: true }
-      );
+      await api.post("/auth/send-otp", {});
 
       navigate("/verify-otp", {
         state: { phone },
         replace: true,
       });
     } catch (err) {
-      setError(err.response?.data?.message || err.response?.data?.msg || "Gagal mengirim OTP");
+      setError(
+        err.response?.data?.message ||
+          err.response?.data?.msg ||
+          "Gagal mengirim OTP"
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      background: "#f9fafb",
-      fontFamily: "'Plus Jakarta Sans', sans-serif",
-      padding: 24,
-    }}>
-      <div style={{
-        width: "100%",
-        maxWidth: 420,
-        background: "#fff",
-        border: "1px solid #e5e7eb",
-        borderRadius: 20,
-        padding: 28,
-        boxShadow: "0 10px 30px rgba(0,0,0,0.06)",
-      }}>
-        <h2 style={{ fontSize: 22, fontWeight: 800, color: "#111827", marginBottom: 8 }}>
+    <div
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "#f9fafb",
+        fontFamily: "'Plus Jakarta Sans', sans-serif",
+        padding: 24,
+      }}
+    >
+      <div
+        style={{
+          width: "100%",
+          maxWidth: 420,
+          background: "#fff",
+          border: "1px solid #e5e7eb",
+          borderRadius: 20,
+          padding: 28,
+          boxShadow: "0 10px 30px rgba(0,0,0,0.06)",
+        }}
+      >
+        <h2
+          style={{
+            fontSize: 22,
+            fontWeight: 800,
+            color: "#111827",
+            marginBottom: 8,
+          }}
+        >
           Verifikasi Nomor WhatsApp
         </h2>
-        <p style={{ fontSize: 13.5, color: "#6b7280", marginBottom: 18, lineHeight: 1.6 }}>
+        <p
+          style={{
+            fontSize: 13.5,
+            color: "#6b7280",
+            marginBottom: 18,
+            lineHeight: 1.6,
+          }}
+        >
           Klik tombol di bawah untuk mengirim kode OTP ke {phone}.
         </p>
 

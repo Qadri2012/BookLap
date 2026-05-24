@@ -5,6 +5,27 @@ const sequelize = require("../config/database");
 const Pemesanan = sequelize.define(
   "Pemesanan",
   {
+    va_number: {
+  type: DataTypes.STRING(30),
+  allowNull: true,
+},
+
+    // ✅ NEW: kode pembayaran untuk minimarket / e-wallet
+    payment_reference: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+    },
+
+    // ✅ NEW: jenis kanal pembayaran
+    payment_channel: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+    },
+
+    payment_expires_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
     id: {
       type: DataTypes.BIGINT,
       primaryKey: true,
@@ -13,7 +34,7 @@ const Pemesanan = sequelize.define(
 
     kode_pemesanan: {
       type: DataTypes.STRING(50),
-      allowNull: false,
+      allowNull: true,
       unique: true,
     },
 
@@ -83,7 +104,12 @@ const Pemesanan = sequelize.define(
       defaultValue: "menunggu_pembayaran",
     },
 
-    status_kedatangan: {
+    // ✅ NEW: status final untuk halaman riwayat
+      riwayat_status: {
+        type: DataTypes.STRING(30),
+        allowNull: true,
+      },
+      status_kedatangan: {
       type: DataTypes.STRING(30),
       allowNull: true,
     },
@@ -102,7 +128,6 @@ const Pemesanan = sequelize.define(
       type: DataTypes.TEXT,
       allowNull: true,
     },
-
     catatan: {
       type: DataTypes.TEXT,
       allowNull: true,
@@ -113,5 +138,4 @@ const Pemesanan = sequelize.define(
     timestamps: false,
   }
 );
-
 module.exports = Pemesanan;

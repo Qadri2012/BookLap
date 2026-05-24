@@ -1,5 +1,6 @@
 // src/pages/pemesanan.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { api } from "../services/api";
 import { useLocation, useNavigate } from "react-router-dom";
 import Footer from "../components/Footer";
 import {
@@ -14,20 +15,6 @@ import {
   LayoutGrid,
   MapPinned,
 } from "lucide-react";
-
-// const paymentOptions = [
-//   { id: "transfer", title: "Transfer" },
-//   { id: "cash", title: "Cash di Tempat" },
-// ];
-
-// const transferMethods = [
-//   { id: "bni", label: "BNI Virtual Account", fee: 4000 },
-//   { id: "bri", label: "BRI Virtual Account", fee: 4000 },
-//   { id: "bsi", label: "BSI Virtual Account", fee: 4500 },
-//   { id: "mandiri", label: "Mandiri Virtual Account", fee: 4000 },
-//   { id: "indomaret", label: "Indomaret", fee: 6500 },
-//   { id: "ewallet", label: "E-Wallet", fee: 3000 },
-// ];
 
 const cashSteps = [
   {
@@ -79,12 +66,76 @@ const benefits = [
   },
 ];
 
-
-const rupiahToNumber = (value) =>
-  Number(String(value ?? "").replace(/[^\d]/g, "")) || 0;
-
 const formatRupiah = (value) =>
   `Rp ${Number(value || 0).toLocaleString("id-ID")}`;
+const ADMIN_WHATSAPP = "62895417408754";
+const formatWaNumber = (value = "") => {
+  const digits = String(value).replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.startsWith("62")) return digits;
+  if (digits.startsWith("0")) return `62${digits.slice(1)}`;
+  return digits;
+};
+
+const openWhatsAppReceipt = ({
+  target = "user", // "user" | "admin" | "both"
+  userPhone = "",
+  adminPhone = ADMIN_WHATSAPP,
+  kodePemesanan = "",
+  namaPemesan = "",
+  field,
+  selectedSlots = [],
+  totalBayar = 0,
+  paymentMethod = "",
+  paymentCode = "",
+}) => {
+  const firstSlot = selectedSlots?.[0];
+  const tanggal = firstSlot?.tanggal
+    ? new Date(`${firstSlot.tanggal}T00:00:00`).toLocaleDateString("id-ID", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      })
+    : "-";
+
+  const jam = firstSlot?.jam_mulai
+    ? `${String(firstSlot.jam_mulai).slice(0, 5)} - ${String(
+        firstSlot.jam_selesai || ""
+      ).slice(0, 5)}`
+    : "-";
+
+  const message = `*STRUK PEMESANAN BOOKLAP*
+
+Kode Pemesanan: ${kodePemesanan || "-"}
+Nama Pemesan: ${namaPemesan || "-"}
+Lapangan: ${field?.nama || "-"}
+Tanggal: ${tanggal}
+Jam: ${jam}
+Total Bayar: Rp ${Number(totalBayar || 0).toLocaleString("id-ID")}
+Metode Pembayaran: ${paymentMethod || "-"}
+Kode Pembayaran: ${paymentCode || "-"}
+
+Terima kasih telah melakukan pemesanan di BookLap.`;
+
+  const targets = [];
+
+  if (target === "user" || target === "both") {
+    const waUser = formatWaNumber(userPhone);
+    if (waUser) targets.push(waUser);
+  }
+
+  if (target === "admin" || target === "both") {
+    const waAdmin = formatWaNumber(adminPhone);
+    if (waAdmin) targets.push(waAdmin);
+  }
+
+  targets.forEach((waNumber, index) => {
+    const url = `https://wa.me/${waNumber}?text=${encodeURIComponent(message)}`;
+    setTimeout(() => {
+      window.open(url, "_blank", "noopener,noreferrer");
+    }, index * 700);
+  });
+};
 
 function Step({ number, label, active, done }) {
   return (
@@ -191,15 +242,8 @@ export default function Pemesanan() {
         setPaymentLoading(true);
         setPaymentError("");
 
-        const res = await fetch(
-          "http://localhost:5000/api/metode-pembayaran"
-        );
-
-        if (!res.ok) {
-          throw new Error("Gagal mengambil metode pembayaran");
-        }
-
-        const data = await res.json();
+        const res = await api.get("/metode-pembayaran");
+        const data = res.data;
 
         setPaymentOptions(
           Array.isArray(data)
@@ -220,48 +264,52 @@ export default function Pemesanan() {
     };
 
     fetchPaymentMethods();
-    }, []);
+  }, []);
 
-useEffect(() => {
-  const fetchTransferMethods = async () => {
-    try {
-      if (!transferPayment?.dbId) return;
+  useEffect(() => {
+    const fetchTransferMethods = async () => {
+      try {
+        if (!transferPayment?.dbId) {
+          setTransferMethods([]);
+          setTransferLoading(false);
+          return;
+        }
 
-      setTransferLoading(true);
-      setTransferError("");
+        setTransferLoading(true);
+        setTransferError("");
 
-      const res = await fetch(
-        `http://localhost:5000/api/metode-transfer?metode_pembayaran_id=${transferPayment.dbId}`
-      );
+        const res = await api.get(
+          `/metode-transfer?metode_pembayaran_id=${transferPayment.dbId}`
+        );
 
-      if (!res.ok) {
-        throw new Error("Gagal mengambil metode transfer");
+        const data = res.data;
+
+        setTransferMethods(
+          Array.isArray(data)
+            ? data.map((item) => ({
+                dbId: item.id,
+                kode: item.kode,
+
+                // ✅ NEW
+                kategori: item.kategori,
+
+                label: item.nama_metode,
+                fee: Number(item.biaya_admin || 0),
+                logo: item.logo || null,
+              }))
+            : []
+        );
+      } catch (error) {
+        console.error(error);
+        setTransferMethods([]);
+        setTransferError("Metode transfer gagal dimuat");
+      } finally {
+        setTransferLoading(false);
       }
+    };
 
-      const data = await res.json();
-
-      setTransferMethods(
-        Array.isArray(data)
-          ? data.map((item) => ({
-              dbId: item.id,
-              kode: item.kode,
-              label: item.nama_metode,
-              fee: Number(item.biaya_admin || 0),
-              logo: item.logo || null,
-            }))
-          : []
-      );
-    } catch (error) {
-      console.error(error);
-      setTransferMethods([]);
-      setTransferError("Metode transfer gagal dimuat");
-    } finally {
-      setTransferLoading(false);
-    }
-  };
-
-  fetchTransferMethods();
-}, [transferPayment?.dbId]);
+    fetchTransferMethods();
+  }, [transferPayment?.dbId]);
 
   useEffect(() => {
     const fetchServices = async () => {
@@ -269,12 +317,9 @@ useEffect(() => {
         setServicesLoading(true);
         setServicesError("");
 
-        const res = await fetch("http://localhost:5000/api/layanan-tambahan");
-        if (!res.ok) {
-          throw new Error("Gagal mengambil layanan tambahan");
-        }
+        const res = await api.get("/layanan-tambahan");
+        const data = res.data;
 
-        const data = await res.json();
         setServices(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error(error);
@@ -305,12 +350,25 @@ useEffect(() => {
     }, 0);
   }, [services, selectedServices]);
 
+
+  // ✅ NEW: kelompok metode pembayaran
+  const bankMethods = transferMethods.filter(
+    (item) => item.kategori === "bank"
+  );
+
+  const minimarketMethods = transferMethods.filter(
+    (item) => item.kategori === "minimarket"
+  );
+
+  const ewalletMethods = transferMethods.filter(
+    (item) => item.kategori === "ewallet"
+  );
   const selectedTransferFee =
-  paymentMethod === "transfer"
-    ? Number(
-        transferMethods.find((m) => m.kode === selectedTransferMethod)?.fee || 0
-      )
-    : 0;
+    paymentMethod === "transfer"
+      ? Number(
+          transferMethods.find((m) => m.kode === selectedTransferMethod)?.fee || 0
+        )
+      : 0;
 
   const subtotal = biayaSewa + biayaTambahan;
   const grandTotal = subtotal + selectedTransferFee;
@@ -350,15 +408,15 @@ useEffect(() => {
   };
 
   const removeSlot = (slotIndex) => {
-    setSelectedSlots((prev) =>
-      prev.filter((_, index) => index !== slotIndex)
-    );
+    setSelectedSlots((prev) => prev.filter((_, index) => index !== slotIndex));
   };
+
   const handleContinue = async () => {
     if (selectedSlots.length === 0) {
       setSubmitError("Pilih minimal 1 jadwal lapangan.");
       return;
     }
+
     if (!paymentMethod) {
       paymentSectionRef.current?.scrollIntoView({
         behavior: "smooth",
@@ -367,63 +425,72 @@ useEffect(() => {
       return;
     }
 
-  const selectedPayment = paymentOptions.find(
-    (item) => item.kode === paymentMethod
-  );
+    const selectedPayment = paymentOptions.find(
+      (item) => item.kode === paymentMethod
+    );
 
-  if (!selectedPayment) {
-    setSubmitError("Metode pembayaran tidak valid.");
-    return;
-  }
+    if (!selectedPayment) {
+      setSubmitError("Metode pembayaran tidak valid.");
+      return;
+    }
 
-  if (paymentMethod === "transfer" && !selectedTransferMethod) {
-    setTransferSelectionError("Silakan pilih metode transfer terlebih dahulu");
-    paymentSectionRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
-    return;
-  }
+    if (paymentMethod === "transfer" && !selectedTransferMethod) {
+      setTransferSelectionError("Silakan pilih metode transfer terlebih dahulu");
+      paymentSectionRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+      return;
+    }
 
-  const selectedTransfer = transferMethods.find(
-    (item) => item.kode === selectedTransferMethod
-  );
+    const selectedTransfer = transferMethods.find(
+      (item) => item.kode === selectedTransferMethod
+    );
 
-  const currentUser = JSON.parse(localStorage.getItem("user") || "null");
-  const userId = currentUser?.id || currentUser?.user_id;
+    const currentUser = JSON.parse(localStorage.getItem("user") || "null");
+    const userId = currentUser?.id || currentUser?.user_id;
 
-  if (!userId) {
-    setSubmitError("User belum ditemukan. Pastikan data login tersimpan.");
-    return;
-  }
+    if (!userId) {
+      setSubmitError("User belum ditemukan. Pastikan data login tersimpan.");
+      return;
+    }
 
-  if (!namaPemesan.trim() || !emailPemesan.trim() || !noWhatsapp.trim()) {
-    setSubmitError("Lengkapi nama, email, dan nomor WhatsApp terlebih dahulu.");
+    if (!namaPemesan.trim() || !emailPemesan.trim() || !noWhatsapp.trim()) {
+      setSubmitError("Lengkapi nama, email, dan nomor WhatsApp terlebih dahulu.");
 
-    formSectionRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
+      formSectionRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
 
-    return;
-  }
+      return;
+    }
 
-  const biayaAdmin = paymentMethod === "transfer" ? Number(selectedTransfer?.fee || 0) : 0;
-  const totalBayar = subtotal + biayaAdmin;
+    if (paymentMethod === "transfer") {
+      const confirmPay = window.confirm(
+        "Pesanan akan dibuat. Harap segera lakukan pembayaran sebelum batas waktu yang ditentukan"
+      );
 
-  try {
-    setSubmitLoading(true);
-    setSubmitError("");
+      if (!confirmPay) return;
+    }
 
-    const res = await fetch("http://localhost:5000/api/pemesanan", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    const biayaAdmin =
+      paymentMethod === "transfer" ? Number(selectedTransfer?.fee || 0) : 0;
+
+    const totalBayar = subtotal + biayaAdmin;
+
+    try {
+      setSubmitLoading(true);
+      setSubmitError("");
+
+      const res = await api.post("/pemesanan", {
         user_id: userId,
         lapangan_id: field?.id,
         metode_pembayaran_id: selectedPayment.dbId,
+        selected_transfer_method:
+          paymentMethod === "transfer" ? selectedTransferMethod : null,
+        nama_lapangan: field?.nama,
+        selectedSlots,
         nama_pemesan: namaPemesan,
         email: emailPemesan,
         no_whatsapp: noWhatsapp,
@@ -437,127 +504,76 @@ useEffect(() => {
             ? "menunggu_kedatangan"
             : "menunggu_pembayaran",
         catatan: "",
-      }),
-    });
+      });
 
-    const result = await res.json();
+      const result = res.data;
+      const pemesananBaru = result?.data || result;
 
-    if (!res.ok) {
-      throw new Error(result?.message || "Gagal menyimpan pemesanan");
-    }
+      if (!pemesananBaru?.id) {
+        throw new Error("Data pemesanan tidak diterima dari server.");
+      }
 
-    const pemesananBaru = result.data;
-
-if (paymentMethod === "transfer") {
-  if (!selectedTransferMethod) {
-    setTransferSelectionError("Silakan pilih bank tujuan transfer terlebih dahulu.");
-
-    paymentSectionRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
-
-    return;
-  }
-
-  const selectedTransfer = transferMethods.find(
-    (item) => item.kode === selectedTransferMethod
-  );
-
-  if (!selectedTransfer) {
-    setTransferSelectionError("Metode transfer tidak valid.");
-
-    paymentSectionRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
-
-    return;
-  }
-
-  // lanjut proses transfer di sini
-  const biayaAdmin = Number(selectedTransfer?.fee || 0);
-  const totalBayar = subtotal + biayaAdmin;
-
-  try {
-    setSubmitLoading(true);
-    setSubmitError("");
-
-    const res = await fetch("http://localhost:5000/api/pemesanan", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        user_id: userId,
-        lapangan_id: field?.id,
-        metode_pembayaran_id: selectedPayment.dbId,
-        nama_pemesan: namaPemesan,
-        email: emailPemesan,
-        no_whatsapp: noWhatsapp,
-        subtotal_sewa: biayaSewa,
-        subtotal_layanan: biayaTambahan,
-        biaya_admin: biayaAdmin,
-        total_bayar: totalBayar,
-        total_durasi_menit: bookingDurationMinutes,
-        status_pemesanan: "menunggu_pembayaran",
-        catatan: "",
-      }),
-    });
-
-    const result = await res.json();
-
-    if (!res.ok) {
-      throw new Error(result?.message || "Gagal menyimpan pemesanan");
-    }
-
-    const pemesananBaru = result.data;
-
-    navigate("/transfer", {
-      state: {
-        pemesananId: pemesananBaru.id,
+      // ✅ NEW: kirim struk ke WhatsApp
+      openWhatsAppReceipt({
+        target: "both", // ganti jadi "user" / "admin" / "both"
+        userPhone: noWhatsapp,
+        adminPhone: ADMIN_WHATSAPP,
         kodePemesanan: pemesananBaru.kode_pemesanan,
+        namaPemesan,
         field,
         selectedSlots,
-        totalPrice: totalBayar,
-        totalDurationMinutes: bookingDurationMinutes,
-        selectedTransferMethod,
-        selectedTransferFee: biayaAdmin,
-      },
-    });
-
-    return;
-  } catch (error) {
-    console.error(error);
-    setSubmitError(error.message || "Gagal membuat pemesanan");
-  } finally {
-    setSubmitLoading(false);
-  }
-}
-
-    if (paymentMethod === "cash") {
-      navigate("/pesanan", {
-        state: {
-          pemesananId: pemesananBaru.id,
-          kodePemesanan: pemesananBaru.kode_pemesanan,
-          field,
-          selectedSlots,
-          totalPrice: totalBayar,
-          totalDurationMinutes: bookingDurationMinutes,
-          paymentMethod: "cash",
-        },
+        totalBayar,
+        paymentMethod,
+        paymentCode:
+          pemesananBaru.va_number ||
+          pemesananBaru.payment_reference ||
+          pemesananBaru.kode_pemesanan,
       });
+
+      if (paymentMethod === "transfer") {
+        navigate("/transfer", {
+          state: {
+            pemesananId: pemesananBaru.id,
+            field,
+            selectedSlots,
+            totalPrice: totalBayar,
+            totalDurationMinutes: bookingDurationMinutes,
+            selectedTransferMethod,
+            selectedTransferFee: biayaAdmin,
+            noWhatsapp,
+            vaNumber: pemesananBaru.va_number,
+            paymentReference: pemesananBaru.payment_reference,
+            paymentChannel: pemesananBaru.payment_channel,
+            paymentExpiresAt: Date.now() + 60 * 60 * 1000,
+          },
+        });
+        return;
+      }
+
+      if (paymentMethod === "cash") {
+        navigate("/cash", {
+          state: {
+            pemesananId: pemesananBaru.id,
+            kodePemesanan: pemesananBaru.kode_pemesanan,
+            field,
+            selectedSlots,
+            totalPrice: totalBayar,
+            totalDurationMinutes: bookingDurationMinutes,
+            paymentMethod: "cash",
+            namaPemesan,
+            emailPemesan,
+            noWhatsapp,
+          },
+        });
+        return;
+      }
+    } catch (error) {
+      console.error(error);
+      setSubmitError(error.message || "Gagal membuat pemesanan");
+    } finally {
+      setSubmitLoading(false);
     }
-  } catch (error) {
-    console.error(error);
-    setSubmitError(error.message || "Gagal membuat pemesanan");
-  } finally {
-    setSubmitLoading(false);
-  }
-};
-
-
-  
+  };
 
   const currentCardPrice =
     paymentMethod === "transfer" ? grandTotal : subtotal;
@@ -729,42 +745,41 @@ if (paymentMethod === "transfer") {
                   Pilih Pembayaran
                 </h2>
 
-              <div className="mt-2 grid grid-cols-2 gap-4 px-2 pb-1">
+                <div className="mt-2 grid grid-cols-2 gap-4 px-2 pb-1">
+                  {paymentLoading ? (
+                    <div className="col-span-2 py-6 text-center text-[14px] text-[#666]">
+                      Memuat metode pembayaran...
+                    </div>
+                  ) : paymentError ? (
+                    <div className="col-span-2 py-6 text-center text-[14px] text-red-600">
+                      {paymentError}
+                    </div>
+                  ) : (
+                    paymentOptions.map((item) => {
+                      const cardPrice =
+                        item.kode === "transfer"
+                          ? subtotal + selectedTransferFee
+                          : subtotal;
 
-                {paymentLoading ? (
-                  <div className="col-span-2 py-6 text-center text-[14px] text-[#666]">
-                    Memuat metode pembayaran...
-                  </div>
-                ) : paymentError ? (
-                  <div className="col-span-2 py-6 text-center text-[14px] text-red-600">
-                    {paymentError}
-                  </div>
-                ) : (
-                  paymentOptions.map((item) => {
-                  const cardPrice =
-                    item.kode === "transfer"
-                      ? subtotal + selectedTransferFee
-                      : subtotal;
+                      return (
+                        <PaymentCard
+                          key={item.dbId}
+                          active={paymentMethod === item.kode}
+                          title={item.title}
+                          price={formatRupiah(cardPrice)}
+                          onClick={() => {
+                            setPaymentMethod(item.kode);
 
-                    return (
-                      <PaymentCard
-                        key={item.id}
-                        active={paymentMethod === item.kode}
-                        title={item.title}
-                        price={formatRupiah(cardPrice)}
-                        onClick={() => {
-                          setPaymentMethod(item.kode);
-
-                          if (item.kode !== "transfer") {
-                            setSelectedTransferMethod(method.kode);
-                            setTransferSelectionError("");
-                          }
-                        }}
-                      />
-                    );
-                  })
-                )}
-              </div>
+                            if (item.kode !== "transfer") {
+                              setSelectedTransferMethod(null);
+                              setTransferSelectionError("");
+                            }
+                          }}
+                        />
+                      );
+                    })
+                  )}
+                </div>
               </div>
 
               {paymentMethod === "cash" && (
@@ -843,7 +858,7 @@ if (paymentMethod === "transfer") {
                     onChange={(e) => setNoWhatsapp(e.target.value)}
                   />
                 </div>
-            
+
                 <div className="my-4 border-t-4 border-[#efefef]" />
 
                 <div className="rounded-[12px] border border-[#cfcfcf] bg-white p-3">
@@ -954,48 +969,142 @@ if (paymentMethod === "transfer") {
                     </h3>
 
                     {transferSelectionError && (
-                        <div className="mt-3 rounded-[10px] bg-[#fff1f1] px-3 py-2 text-[13px] text-red-600">
-                          {transferSelectionError}
-                        </div>
+                      <div className="mt-3 rounded-[10px] bg-[#fff1f1] px-3 py-2 text-[13px] text-red-600">
+                        {transferSelectionError}
+                      </div>
                     )}
 
                     <div className="mt-3 space-y-2">
-                      {transferMethods.map((method) => {
-                        const active = selectedTransferMethod === method.kode;
+                   <div className="space-y-5">
+  <div>
+    <h4 className="mb-2 text-[15px] font-bold text-[#222]">
+      Transfer Bank
+    </h4>
+    <div className="space-y-2">
+      {bankMethods.map((method) => {
+        const active = selectedTransferMethod === method.kode;
 
-                        return (
-                          <button
-                            key={method.id}
-                            type="button"
-                            onClick={() => setSelectedTransferMethod(method.kode)}
-                            className={[
-                              "flex w-full items-center gap-3 rounded-[10px] border px-3 py-2 text-left transition",
-                              active
-                                ? "border-[#2e8a3a] bg-[#f0fdf4]"
-                                : "border-[#cfcfcf] bg-white",
-                            ].join(" ")}
-                          >
-                            <span
-                              className={[
-                                "h-4 w-4 rounded-full border",
-                                active
-                                  ? "border-[#2e8a3a] bg-[#2e8a3a]"
-                                  : "border-[#999] bg-white",
-                              ].join(" ")}
-                            />
+        return (
+          <button
+            key={method.dbId}
+            type="button"
+            onClick={() => setSelectedTransferMethod(method.kode)}
+            className={[
+              "flex w-full items-center gap-3 rounded-[10px] border px-3 py-2 text-left transition",
+              active
+                ? "border-[#2e8a3a] bg-[#f0fdf4]"
+                : "border-[#cfcfcf] bg-white",
+            ].join(" ")}
+          >
+            <span
+              className={[
+                "h-4 w-4 rounded-full border",
+                active
+                  ? "border-[#2e8a3a] bg-[#2e8a3a]"
+                  : "border-[#999] bg-white",
+              ].join(" ")}
+            />
 
-                            <div className="flex flex-col">
-                              <span className="text-[15px] font-medium text-[#111]">
-                                {method.label}
-                              </span>
-                              <span className="mt-1 text-[12px] font-semibold text-[#2e8a3a]">
-                                Rp {method.fee.toLocaleString("id-ID")}
-                              </span>
-                            </div>
-                          </button>
-                        );
-                      })}
-                      
+            <div className="flex flex-col">
+              <span className="text-[15px] font-medium text-[#111]">
+                {method.label}
+              </span>
+              <span className="mt-1 text-[12px] font-semibold text-[#2e8a3a]">
+                Rp {method.fee.toLocaleString("id-ID")}
+              </span>
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  </div>
+
+  <div>
+    <h4 className="mb-2 text-[15px] font-bold text-[#222]">
+      Minimarket
+    </h4>
+    <div className="space-y-2">
+      {minimarketMethods.map((method) => {
+        const active = selectedTransferMethod === method.kode;
+
+        return (
+          <button
+            key={method.dbId}
+            type="button"
+            onClick={() => setSelectedTransferMethod(method.kode)}
+            className={[
+              "flex w-full items-center gap-3 rounded-[10px] border px-3 py-2 text-left transition",
+              active
+                ? "border-[#2e8a3a] bg-[#f0fdf4]"
+                : "border-[#cfcfcf] bg-white",
+            ].join(" ")}
+          >
+            <span
+              className={[
+                "h-4 w-4 rounded-full border",
+                active
+                  ? "border-[#2e8a3a] bg-[#2e8a3a]"
+                  : "border-[#999] bg-white",
+              ].join(" ")}
+            />
+
+            <div className="flex flex-col">
+              <span className="text-[15px] font-medium text-[#111]">
+                {method.label}
+              </span>
+              <span className="mt-1 text-[12px] font-semibold text-[#2e8a3a]">
+                Rp {method.fee.toLocaleString("id-ID")}
+              </span>
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  </div>
+
+  <div>
+    <h4 className="mb-2 text-[15px] font-bold text-[#222]">
+      E-Wallet
+    </h4>
+    <div className="space-y-2">
+      {ewalletMethods.map((method) => {
+        const active = selectedTransferMethod === method.kode;
+
+        return (
+          <button
+            key={method.dbId}
+            type="button"
+            onClick={() => setSelectedTransferMethod(method.kode)}
+            className={[
+              "flex w-full items-center gap-3 rounded-[10px] border px-3 py-2 text-left transition",
+              active
+                ? "border-[#2e8a3a] bg-[#f0fdf4]"
+                : "border-[#cfcfcf] bg-white",
+            ].join(" ")}
+          >
+            <span
+              className={[
+                "h-4 w-4 rounded-full border",
+                active
+                  ? "border-[#2e8a3a] bg-[#2e8a3a]"
+                  : "border-[#999] bg-white",
+              ].join(" ")}
+            />
+
+            <div className="flex flex-col">
+              <span className="text-[15px] font-medium text-[#111]">
+                {method.label}
+              </span>
+              <span className="mt-1 text-[12px] font-semibold text-[#2e8a3a]">
+                Rp {method.fee.toLocaleString("id-ID")}
+              </span>
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  </div>
+</div>
                     </div>
                   </div>
                 )}
