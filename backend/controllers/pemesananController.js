@@ -6,6 +6,10 @@ const sequelize = require("../config/database");
 const { Op } = require("sequelize");
 const DetailPemesanan = require("../models/detailPemesanan");
 
+const Jadwal = require("../models/jadwal");
+const Lapangan = require("../models/Lapangan");
+const DetailLayananPemesanan = require("../models/detailLayananPemesanan");
+const LayananTambahan = require("../models/layananTambahanModel");
 const generateKodePemesanan = () => {
   const now = new Date();
   const tanggal = now.toISOString().slice(0, 10).replace(/-/g, "");
@@ -68,17 +72,62 @@ const resolveMetodePembayaran = async (value, transaction) => {
   return byKode;
 };
 
-const getAllPemesanan = async (req, res) => {
+const getAllPemesanan = async (
+  req,
+  res
+) => {
   try {
-    const data = await Pemesanan.findAll({
-      order: [["id", "DESC"]],
-    });
 
-    return res.status(200).json(data);
+    const data =
+      await Pemesanan.findAll({
+        include: [
+          {
+            model:
+              DetailPemesanan,
+            as:
+              "detail_pemesanan",
+          },
+
+          {
+            model: Lapangan,
+            as: "lapangan",
+          },
+
+          {
+            model:
+              DetailLayananPemesanan,
+            as:
+              "detail_layanan",
+
+            include: [
+              {
+                model:
+                  LayananTambahan,
+                as: "layanan",
+              },
+            ],
+          },
+        ],
+
+        order: [
+          ["id", "DESC"],
+        ],
+      });
+
+    return res
+      .status(200)
+      .json(data);
+
   } catch (error) {
-    console.error("GET pemesanan error:", error);
+
+    console.error(
+      "GET ALL PEMESANAN ERROR:",
+      error
+    );
+
     return res.status(500).json({
-      message: "Gagal mengambil data pemesanan",
+      message:
+        "Gagal mengambil data pemesanan",
     });
   }
 };
@@ -87,7 +136,35 @@ const getPemesananById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const data = await Pemesanan.findByPk(id);
+    const data = await Pemesanan.findByPk(id, {
+      include: [
+        {
+          model: DetailPemesanan,
+          as: "detail_pemesanan",
+        },
+        {
+          model: Lapangan,
+          as: "lapangan",
+        },
+
+        // ===== NEW CODE : DETAIL LAYANAN =====
+        {
+          model: DetailLayananPemesanan,
+          as: "detail_layanan",
+          include: [
+            {
+              model: LayananTambahan,
+              as: "layanan",
+              attributes: [
+                "id",
+                "nama_layanan",
+              ],
+            },
+          ],
+        },
+        // ===== END NEW CODE =====
+      ],
+    });
 
     if (!data) {
       return res.status(404).json({
@@ -97,9 +174,14 @@ const getPemesananById = async (req, res) => {
 
     return res.status(200).json(data);
   } catch (error) {
-    console.error("GET pemesanan by id error:", error);
+    console.error(
+      "GET pemesanan by id error:",
+      error
+    );
+
     return res.status(500).json({
-      message: "Gagal mengambil detail pemesanan",
+      message:
+        "Gagal mengambil detail pemesanan",
     });
   }
 };
@@ -108,7 +190,7 @@ const getPemesananByUser = async (req, res) => {
   try {
     const { userId } = req.params;
 
-    const data = await Pemesanan.findAll({
+    const pemesananList = await Pemesanan.findAll({
       where: {
         user_id: userId,
         riwayat_status: null,
@@ -116,9 +198,49 @@ const getPemesananByUser = async (req, res) => {
       order: [["id", "DESC"]],
     });
 
+    const data = await Promise.all(
+      pemesananList.map(async (item) => {
+        const detail = await DetailPemesanan.findAll({
+          where: {
+            pemesanan_id: item.id,
+          },
+          order: [["tanggal", "ASC"]],
+        });
+
+        const layanan =
+          await DetailLayananPemesanan.findAll({
+            where: {
+              pemesanan_id: item.id,
+            },
+
+            include: [
+              {
+                model: LayananTambahan,
+                as: "layanan",
+
+                attributes: [
+                  "id",
+                  "nama_layanan",
+                ],
+              },
+            ],
+          });
+
+        const lapangan = await Lapangan.findByPk(item.lapangan_id);
+
+        return {
+          ...item.toJSON(),
+          detail_pemesanan: detail,
+          detail_layanan: layanan,
+          lapangan,
+        };
+      })
+    );
+
     return res.status(200).json(data);
   } catch (error) {
     console.error("GET pemesanan by user error:", error);
+
     return res.status(500).json({
       message: "Gagal mengambil data pemesanan user",
     });
@@ -131,14 +253,26 @@ const getRiwayatByUser = async (req, res) => {
     const data = await Pemesanan.findAll({
       where: {
         user_id: userId,
-        riwayat_status: {
-          [Op.in]: [
-            RIWAYAT_STATUS.TRANSFER,
-            RIWAYAT_STATUS.CASH,
-            RIWAYAT_STATUS.BATAL,
+        riwayat_status: null,
+      },
+
+      include: [
+        {
+          model: DetailPemesanan,
+          as: "detail_pemesanan",
+        },
+
+        {
+          model: Lapangan,
+          as: "lapangan",
+          attributes: [
+            "id",
+            "nama",
+            "alamat",
           ],
         },
-      },
+      ],
+
       order: [["id", "DESC"]],
     });
 
@@ -159,6 +293,7 @@ const createPemesanan = async (req, res) => {
       user_id,
       lapangan_id,
       metode_pembayaran_id,
+      selectedServiceDetails = [],
       selected_transfer_method,
       selectedTransferMethod,
       nama_pemesan,
@@ -219,8 +354,19 @@ let vaNumber = null;
 let paymentReference = null;
 let paymentChannel = null;
 let biayaAdminFinal = 0;
+let paymentExpiresAt = null;
 
 if (isTransfer) {
+  // NEW CODE TIMER FIX
+  paymentExpiresAt = new Date(
+  Date.now() + 60 * 60 * 1000
+);
+
+console.log(
+  "PAYMENT EXPIRES AT =",
+  paymentExpiresAt.toISOString()
+);
+  
   const transferCode = String(
     selected_transfer_method || selectedTransferMethod || ""
   )
@@ -286,11 +432,73 @@ if (isCash) {
   paymentChannel = "cash";
 }
 
+// =====================================================
+// NEW CODE TAHAP 9
+// CEK DOUBLE BOOKING
+// =====================================================
+
+for (const slot of selectedSlots) {
+
+  const jadwalAktif =
+    await Jadwal.findOne({
+      where: {
+        lapangan_id,
+        court_no: Number(
+          slot.court_no ||
+          slot.nomor_lapangan
+        ),
+        tanggal: slot.tanggal,
+        jam_mulai: slot.jam_mulai,
+        jam_selesai: slot.jam_selesai,
+      },
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+
+  if (!jadwalAktif) {
+    await transaction.rollback();
+
+    return res.status(404).json({
+      message:
+        "Slot jadwal tidak ditemukan",
+    });
+  }
+
+  if (
+    jadwalAktif.status !==
+    "tersedia"
+  ) {
+    await transaction.rollback();
+
+    return res.status(400).json({
+      message:
+        `Slot ${slot.jam_mulai}-${slot.jam_selesai} sudah tidak tersedia`,
+    });
+  }
+}
+
+// =====================================================
+// END NEW CODE
+// =====================================================
+
     const subtotalSewaNum = Number(subtotal_sewa || 0);
     const subtotalLayananNum = Number(subtotal_layanan || 0);
     const totalBayarFinal =
       subtotalSewaNum + subtotalLayananNum + biayaAdminFinal;
+    
+    console.log("========== BACKEND ==========");
+console.log(
+  "total_durasi_menit =",
+  total_durasi_menit
+);
 
+console.log(
+  "selectedSlots.length =",
+  selectedSlots.length
+);
+
+console.log(selectedSlots);
+console.log("=============================");
     const data = await Pemesanan.create(
     {
       kode_pemesanan: isCash ? kodePemesananBaru : null,
@@ -299,6 +507,7 @@ if (isCash) {
         paymentChannel === "ewallet" || paymentChannel === "minimarket"
           ? paymentReference
           : null,
+      payment_expires_at: paymentExpiresAt,
       payment_channel: paymentChannel,
       riwayat_status: null,
     user_id,
@@ -336,6 +545,51 @@ if (isCash) {
     }));
 
     await DetailPemesanan.bulkCreate(detailRows, { transaction });
+    // ===== NEW CODE =====
+    if (
+      Array.isArray(selectedServiceDetails) &&
+      selectedServiceDetails.length > 0
+    ) {
+      const layananRows =
+        selectedServiceDetails.map(
+          (item) => ({
+            pemesanan_id: data.id,
+            layanan_id: item.id,
+            qty: Number(item.qty || 1),
+            harga_satuan: Number(
+              item.harga_satuan || 0
+            ),
+            subtotal: Number(
+              item.subtotal || 0
+            ),
+          })
+        );
+
+      await DetailLayananPemesanan.bulkCreate(
+        layananRows,
+        { transaction }
+      );
+    }
+
+for (const slot of selectedSlots) {
+  await Jadwal.update(
+  {
+    status: "booking",
+  },
+    {
+      where: {
+        lapangan_id,
+        court_no: Number(
+          slot.court_no || slot.nomor_lapangan
+        ),
+        tanggal: slot.tanggal,
+        jam_mulai: slot.jam_mulai,
+        jam_selesai: slot.jam_selesai,
+      },
+      transaction,
+    }
+  );
+}
 
     await transaction.commit();
 
@@ -362,6 +616,7 @@ const updatePemesanan = async (req, res) => {
     const { id } = req.params;
 
     const data = await Pemesanan.findByPk(id);
+    
     if (!data) {
       return res.status(404).json({
         message: "Pemesanan tidak ditemukan",
@@ -401,6 +656,41 @@ const updateStatusPemesanan = async (req, res) => {
       alasan_batal,
       dibatalkan_at,
     });
+    // ===== NEW CODE TAHAP 8A =====
+    if (status_pemesanan === "booking") {
+
+      const detailSlots =
+        await DetailPemesanan.findAll({
+          where: {
+            pemesanan_id: data.id,
+          },
+        });
+
+      for (const slot of detailSlots) {
+
+        await Jadwal.update(
+          {
+            status: "booking",
+          },
+          {
+            where: {
+              lapangan_id:
+                data.lapangan_id,
+              court_no:
+                slot.nomor_lapangan,
+              tanggal:
+                slot.tanggal,
+              jam_mulai:
+                slot.jam_mulai,
+              jam_selesai:
+                slot.jam_selesai,
+            },
+          }
+        );
+
+      }
+    }
+    // ===== END NEW CODE =====
 
     return res.status(200).json({
       message: "Status pemesanan berhasil diperbarui",
@@ -436,6 +726,35 @@ const selesaiPemesanan = async (req, res) => {
       status_pemesanan: "selesai",
       riwayat_status: riwayatStatus,
     });
+    // ===== NEW CODE TAHAP 3.1 =====
+    const detailSlots =
+      await DetailPemesanan.findAll({
+        where: {
+          pemesanan_id: data.id,
+        },
+      });
+
+    for (const slot of detailSlots) {
+      await Jadwal.update(
+        {
+          status: "tersedia",
+        },
+        {
+          where: {
+            lapangan_id: data.lapangan_id,
+            court_no:
+              slot.nomor_lapangan,
+            tanggal: slot.tanggal,
+            jam_mulai:
+              slot.jam_mulai,
+            jam_selesai:
+              slot.jam_selesai,
+          },
+        }
+      );
+    }
+
+    // ===== END NEW CODE =====
 
     return res.status(200).json({
       message: "Pemesanan berhasil diselesaikan",
@@ -467,6 +786,37 @@ const setujuiPembatalan = async (req, res) => {
       dibatalkan_at: new Date(),
     });
 
+    // ===== NEW CODE TAHAP 7C =====
+
+    const detailSlots =
+      await DetailPemesanan.findAll({
+        where: {
+          pemesanan_id: data.id,
+        },
+      });
+
+    for (const slot of detailSlots) {
+      await Jadwal.update(
+        {
+          status: "dibatalkan",
+        },
+        {
+          where: {
+            lapangan_id: data.lapangan_id,
+            court_no:
+              slot.nomor_lapangan,
+            tanggal: slot.tanggal,
+            jam_mulai:
+              slot.jam_mulai,
+            jam_selesai:
+              slot.jam_selesai,
+          },
+        }
+      );
+    }
+
+    // ===== END NEW CODE =====
+
     return res.status(200).json({
       message: "Pembatalan berhasil disetujui",
       data,
@@ -479,6 +829,173 @@ const setujuiPembatalan = async (req, res) => {
   }
 };
 
+// ===== NEW CODE TAHAP 7B =====
+const ajukanPembatalan = async (
+  req,
+  res
+) => {
+  try {
+    const { id } = req.params;
+
+    const data =
+      await Pemesanan.findByPk(id);
+
+    if (!data) {
+      return res.status(404).json({
+        message:
+          "Pemesanan tidak ditemukan",
+      });
+    }
+
+    if (
+      data.status_pemesanan ===
+      "dibatalkan"
+    ) {
+      return res.status(400).json({
+        message:
+          "Pesanan sudah dibatalkan",
+      });
+    }
+
+    if (
+      data.status_pemesanan ===
+      "selesai"
+    ) {
+      return res.status(400).json({
+        message:
+          "Pesanan sudah selesai",
+      });
+    }
+    // ===== NEW CODE TAHAP 7D =====
+
+if (data.payment_channel === "cash") {
+
+  const detailSlot =
+    await DetailPemesanan.findOne({
+      where: {
+        pemesanan_id: data.id,
+      },
+      order: [
+        ["tanggal", "ASC"],
+        ["jam_mulai", "ASC"],
+      ],
+    });
+
+  if (detailSlot) {
+
+    const waktuMain =
+      new Date(
+        `${detailSlot.tanggal} ${detailSlot.jam_mulai}`
+      );
+
+    const batasPembatalan =
+      new Date(
+        waktuMain.getTime() -
+        60 * 60 * 1000
+      );
+
+    const sekarang = new Date();
+
+    if (sekarang >= batasPembatalan) {
+      return res.status(400).json({
+        message:
+          "Pesanan cash tidak dapat dibatalkan kurang dari 1 jam sebelum waktu bermain",
+      });
+    }
+  }
+}
+
+// ===== END NEW CODE =====
+
+    await data.update({
+      status_pemesanan:
+        "menunggu_persetujuan_pembatalan",
+
+      alasan_batal:
+        req.body.alasan_batal || null,
+    });
+
+    return res.status(200).json({
+      message:
+        "Permintaan pembatalan berhasil dikirim",
+      data,
+    });
+  } catch (error) {
+    console.error(
+      "AJUKAN PEMBATALAN ERROR:",
+      error
+    );
+
+    return res.status(500).json({
+      message:
+        "Gagal mengajukan pembatalan",
+    });
+  }
+};
+// ===== END NEW CODE =====
+
+// =====================================================
+// NEW CODE TAHAP 10B
+// KONFIRMASI PEMBAYARAN
+// =====================================================
+
+const konfirmasiPembayaran = async (
+  req,
+  res
+) => {
+  try {
+    const { id } = req.params;
+
+    const data =
+      await Pemesanan.findByPk(id);
+
+    if (!data) {
+      return res.status(404).json({
+        message:
+          "Pemesanan tidak ditemukan",
+      });
+    }
+
+    if (
+      ![
+        "menunggu_pembayaran",
+        "menunggu_kedatangan",
+      ].includes(
+        data.status_pemesanan
+      )
+    ) {
+      return res.status(400).json({
+        message:
+          "Status pesanan tidak dapat dikonfirmasi",
+      });
+    }
+
+    await data.update({
+      status_pemesanan:
+        "sedang_dimainkan",
+    });
+
+    return res.status(200).json({
+      message:
+        "Pembayaran berhasil dikonfirmasi",
+      data,
+    });
+  } catch (error) {
+    console.error(
+      "KONFIRMASI PEMBAYARAN ERROR:",
+      error
+    );
+
+    return res.status(500).json({
+      message:
+        "Gagal mengkonfirmasi pembayaran",
+    });
+  }
+};
+
+// =====================================================
+// END NEW CODE
+// =====================================================
 const deletePemesanan = async (req, res) => {
   try {
     const { id } = req.params;
@@ -514,4 +1031,6 @@ module.exports = {
   selesaiPemesanan,
   setujuiPembatalan,
   deletePemesanan,
+  ajukanPembatalan,
+  konfirmasiPembayaran,
 };

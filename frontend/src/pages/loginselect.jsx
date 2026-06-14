@@ -21,10 +21,10 @@ const OPTIONS = [
       "Laporan otomatis",
       "Kontrol penuh bisnis",
     ],
-    to: "/login/mitra",
+    to: "/login-mitra",
   },
   {
-    title: "Login Admin Komunitas",
+    title: "Login Sebagai Admin",
     desc: "Kelola komunitas olahraga dengan mudah.",
     benefits: [
       "Dashboard komunitas",
@@ -32,7 +32,7 @@ const OPTIONS = [
       "Pantau anggota",
       "Integrasi lapangan",
     ],
-    to: "/login/admin",
+    to: "/login-admin",
   },
 ];
 

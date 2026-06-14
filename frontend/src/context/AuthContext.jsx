@@ -26,19 +26,15 @@ export function AuthProvider({ children }) {
   // ─────────────────────────────────────────────
   // LOGOUT
   // ─────────────────────────────────────────────
-  const logout = useCallback((redirect = true) => {
-    // ✅ NEW: refresh token sudah tidak ada di localStorage
+  const logout = useCallback((redirect = true, redirectTo = "/login/user") => {
     removeToken();
-
     localStorage.removeItem("redirectAfterAuth");
-
     setUser(null);
 
     if (redirect) {
-      window.location.href = "/login/user";
+      window.location.href = redirectTo;
     }
   }, []);
-
   // ─────────────────────────────────────────────
   // LOGIN
   // ─────────────────────────────────────────────

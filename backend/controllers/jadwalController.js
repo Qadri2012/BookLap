@@ -3,14 +3,7 @@
 const Lapangan = require("../models/lapangan");
 const Jadwal = require("../models/jadwal");
 
-function normalizeDate(value) {
-  if (!value) return null;
 
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return null;
-
-  return date.toISOString().slice(0, 10);
-}
 
 function toNumber(value) {
   if (value === undefined || value === null || value === "") return null;
@@ -18,63 +11,12 @@ function toNumber(value) {
   return Number.isNaN(n) ? null : n;
 }
 
-async function cloneTemplateToDate({ lapanganId, tanggal, courtNo = null }) {
-  // ambil template dari tanggal paling awal
-  const templateWhere = {
-    lapangan_id: lapanganId,
-  };
-
-  if (courtNo !== null) {
-    templateWhere.court_no = courtNo;
-  }
-
-  // ambil semua template dari tanggal pertama
-  const templateRows = await Jadwal.findAll({
-    where: templateWhere,
-    order: [
-      ["tanggal", "ASC"],
-      ["court_no", "ASC"],
-      ["jam_mulai", "ASC"],
-    ],
-  });
-
-  if (!templateRows.length) {
-    return [];
-  }
-
-  // clone ke tanggal baru
-  const payload = templateRows.map((row) => ({
-    lapangan_id: row.lapangan_id,
-    court_no: row.court_no,
-    tanggal: tanggal, // tanggal baru
-    jam_mulai: row.jam_mulai,
-    jam_selesai: row.jam_selesai,
-    harga: row.harga,
-    status: "tersedia",
-  }));
-
-  // insert jadwal baru
-  await Jadwal.bulkCreate(payload);
-
-  // ambil ulang hasil clone
-  return Jadwal.findAll({
-    where: {
-      lapangan_id: lapanganId,
-      tanggal,
-      ...(courtNo !== null ? { court_no: courtNo } : {}),
-    },
-    order: [
-      ["court_no", "ASC"],
-      ["jam_mulai", "ASC"],
-    ],
-  });
-}
-
 exports.getJadwal = async (req, res) => {
   try {
     const lapanganId = toNumber(req.query.lapangan_id);
+    const tanggal = req.query.tanggal;
     const courtNo = toNumber(req.query.court_no);
-    const tanggal = normalizeDate(req.query.tanggal);
+
 
     if (!lapanganId) {
       return res.status(400).json({
@@ -82,31 +24,72 @@ exports.getJadwal = async (req, res) => {
       });
     }
 
-    const where = { lapangan_id: lapanganId };
+    const where = {
+      lapangan_id: lapanganId,
+    };
 
     if (tanggal) {
       where.tanggal = tanggal;
     }
 
-    if (courtNo !== null) {
+    // ✅ FILTER NOMOR LAPANGAN
+    if (courtNo) {
       where.court_no = courtNo;
     }
-
+    console.log("FILTER JADWAL:", where);
     let jadwal = await Jadwal.findAll({
-      where,
-      order: [
-        ["court_no", "ASC"],
-        ["jam_mulai", "ASC"],
-      ],
-    });
+  where,
+  order: [
+    ["court_no", "ASC"],
+    ["jam_mulai", "ASC"],
+  ],
+});
 
-    if (jadwal.length === 0 && tanggal) {
-      jadwal = await cloneTemplateToDate({
-        lapanganId,
-        tanggal,
-        courtNo,
-      });
+
+const Pemesanan = require("../models/pemesanan");
+const DetailPemesanan = require("../models/detailPemesanan");
+
+const result = [];
+
+for (const slot of jadwal) {
+  const detail = await DetailPemesanan.findOne({
+    where: {
+      tanggal: slot.tanggal,
+      nomor_lapangan: slot.court_no,
+      jam_mulai: slot.jam_mulai,
+      jam_selesai: slot.jam_selesai,
+    },
+  });
+
+  let pemesan = "-";
+  let kodePemesanan = "-";
+
+  if (detail) {
+    const pesanan =
+      await Pemesanan.findByPk(
+        detail.pemesanan_id
+      );
+
+    if (pesanan) {
+      pemesan =
+        pesanan.nama_pemesan || "-";
+
+      kodePemesanan =
+        pesanan.kode_pemesanan ||
+        pesanan.id;
     }
+  }
+
+  result.push({
+    ...slot.toJSON(),
+    pemesan,
+    kodePemesanan,
+  });
+}
+
+return res.json(result);
+
+   
 
     return res.json(jadwal);
   } catch (err) {

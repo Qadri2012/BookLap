@@ -7,8 +7,8 @@ const Lapangan = sequelize.define(
   {
     // ✅ NEW: ID tetap UUID
     id: {
-      type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV4,
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
       primaryKey: true,
     },
 
@@ -90,6 +90,11 @@ const Lapangan = sequelize.define(
 
     longitude: {
       type: DataTypes.FLOAT,
+      allowNull: true,
+    },
+    // NEW
+    courts: {
+      type: DataTypes.JSON,
       allowNull: true,
     },
 

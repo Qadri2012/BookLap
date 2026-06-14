@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ================= GLOBAL FIX ================= */
+/*GLOBAL FIX*/
 * {
   box-sizing: border-box;
 }
@@ -13,31 +13,25 @@ html, body {
   overflow-x: hidden;
 }
 
-/* ================= ROOT ================= */
+/*ROOT*/
 :root {
   --text: #6b6375;
   --text-h: #08060d;
   --bg: #fff;
-
   --border: #e5e4e7;
   --code-bg: #f4f3ec;
-
   --accent: #aa3bff;
-
   --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
   --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
   --mono: ui-monospace, Consolas, monospace;
-
   font-family: var(--sans);
-
   color-scheme: light dark;
   color: var(--text);
   background: var(--bg);
-
   -webkit-font-smoothing: antialiased;
 }
 
-/* ================= DARK MODE ================= */
+/*DARK MODE*/
 @media (prefers-color-scheme: dark) {
   :root {
     --text: #9ca3af;
@@ -46,7 +40,7 @@ html, body {
   }
 }
 
-/* ================= ROOT APP ================= */
+/*ROOT APP*/
 #root {
   width: 100%;
   display: flex;
@@ -54,29 +48,25 @@ html, body {
   min-height: 100vh;
 }
 
-/* ================= TYPOGRAPHY ================= */
+/*TYPOGRAPHY*/
 body {
   @apply text-base md:text-lg leading-relaxed;
 }
-
 h1, h2 {
   font-family: var(--heading);
   color: var(--text-h);
 }
-
 h1 {
   @apply text-3xl md:text-4xl;
 }
-
 h2 {
   @apply text-xl md:text-2xl;
 }
-
 p {
   margin: 0;
 }
 
-/* ================= CODE ================= */
+/*CODE*/
 code {
   font-family: var(--mono);
   font-size: 0.9em;
@@ -85,11 +75,10 @@ code {
   background: var(--code-bg);
 }
 
-/* ================= SCROLLBAR ================= */
+/*SCROLLBAR*/
 ::-webkit-scrollbar {
   width: 0px;
 }
-
 html {
   scrollbar-width: none;
 }

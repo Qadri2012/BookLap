@@ -140,7 +140,7 @@ function CekJadwal({ field, slotGridRef, initialSelectedSlots = [], initialOpenB
 
   const [selectedDayIdx, setSelectedDayIdx] = useState(0);
   const [selectedCourt, setSelectedCourt] = useState(
-    hasMultipleCourts ? "Semua Lapangan" : courts[0] || "Lapangan 1"
+    hasMultipleCourts ? "Pilih Jadwal Disini" : courts[0] || "Lapangan 1"
   );
   const [courtDropOpen, setCourtDropOpen] = useState(false);
   const [selectedSlots, setSelectedSlots] = useState(
@@ -149,14 +149,15 @@ function CekJadwal({ field, slotGridRef, initialSelectedSlots = [], initialOpenB
     )
   );
   const [showSelectedPanel, setShowSelectedPanel] = useState(initialOpenBookingBox);
-  const [timeFilter, setTimeFilter] = useState("Hari Ini");
   const [jadwalData, setJadwalData] = useState([]);
   const [loadingJadwal, setLoadingJadwal] = useState(false);
 
   const selectedCourtNo =
-    selectedCourt === "Semua Lapangan"
+    selectedCourt === "Pilih Jadwal Disini"
       ? null
       : Number(String(selectedCourt).match(/\d+/)?.[0] || 1);
+  // [NEW CODE]
+  const isViewAllMode = selectedCourt === "Pilih Jadwal Disini";
 
   const selectedDate = weekDays[selectedDayIdx]?.iso;
 
@@ -202,11 +203,17 @@ function CekJadwal({ field, slotGridRef, initialSelectedSlots = [], initialOpenB
   }
 
   function toggleSlot(slot) {
+    // [NEW CODE]
+    if (isViewAllMode) return;
+
     if (slot.status !== "tersedia") return;
 
     const key = `${slot.tanggal}-${slot.jam_mulai}-${slot.jam_selesai}-${slot.court_no}`;
+
     setSelectedSlots((prev) =>
-      prev.includes(key) ? prev.filter((s) => s !== key) : [...prev, key]
+      prev.includes(key)
+        ? prev.filter((s) => s !== key)
+        : [...prev, key]
     );
   }
 
@@ -362,6 +369,27 @@ function CekJadwal({ field, slotGridRef, initialSelectedSlots = [], initialOpenB
         >
           Pilih Lapangan
         </div>
+        {/* [NEW CODE] INFO MODE LIHAT SEMUA */}
+{isViewAllMode && (
+  <div
+    style={{
+      margin: "12px 16px 0",
+      padding: "10px 14px",
+      borderRadius: 10,
+      background: "#eff6ff",
+      border: "1px solid #bfdbfe",
+      color: "#1d4ed8",
+      fontSize: 12,
+      fontWeight: 600,
+      textAlign: "center",
+      lineHeight: 1.5,
+    }}
+  >
+    Mode Lihat Semua Jadwal aktif.
+    <br />
+    Pilih Lapangan 1 atau Lapangan 2 untuk melakukan pemesanan.
+  </div>
+)}
 
         <div
           style={{
@@ -427,9 +455,10 @@ function CekJadwal({ field, slotGridRef, initialSelectedSlots = [], initialOpenB
                     overflow: "hidden",
                   }}
                 >
-                  <button
+                  {/* [NEW CODE] LIHAT SEMUA JADWAL */}
+<button
   onClick={() => {
-    setSelectedCourt("Semua Lapangan");
+    setSelectedCourt("Pilih Jadwal Disini");
     setCourtDropOpen(false);
     setSelectedSlots([]);
   }}
@@ -441,14 +470,26 @@ function CekJadwal({ field, slotGridRef, initialSelectedSlots = [], initialOpenB
     border: "none",
     cursor: "pointer",
     fontSize: 13,
-    fontWeight: selectedCourt === "Semua Lapangan" ? 700 : 500,
-    background: selectedCourt === "Semua Lapangan" ? "#f0fdf4" : "#fff",
-    color: selectedCourt === "Semua Lapangan" ? "#15803d" : "#374151",
+    fontWeight:
+      selectedCourt === "Pilih Jadwal Disini"
+        ? 700
+        : 500,
+    background:
+      selectedCourt === "Pilih Jadwal Disini"
+        ? "#f0fdf4"
+        : "#fff",
+    color:
+      selectedCourt === "Pilih Jadwal Disini"
+        ? "#15803d"
+        : "#374151",
+    borderBottom: "1px solid #f3f4f6",
     fontFamily: "'Plus Jakarta Sans', sans-serif",
   }}
 >
-  {selectedCourt === "Semua Lapangan" && <span style={{ marginRight: 6 }}>✓</span>}
-  Semua Lapangan
+  {selectedCourt === "Pilih Jadwal Disini" && (
+    <span style={{ marginRight: 6 }}>✓</span>
+  )}
+  Lihat Semua Jadwal
 </button>
 
                   {courts.map((c, idx) => {
@@ -523,60 +564,45 @@ function CekJadwal({ field, slotGridRef, initialSelectedSlots = [], initialOpenB
   }}
 >
   <div style={{ display: "flex", alignItems: "flex-start" }}>
-    {/* Sidebar filter waktu */}
-    <div style={{ width: 120, borderRight: "1px solid #f3f4f6", flexShrink: 0 }}>
-      <div
-        style={{
-          padding: "11px 14px",
-          fontSize: 12,
-          fontWeight: 700,
-          color: "#374151",
-          borderBottom: "1px solid #f3f4f6",
-          fontFamily: "'Plus Jakarta Sans', sans-serif",
-          lineHeight: 1.4,
-        }}
-      >
-        Pilih Waktu Tersedia
-      </div>
-
-      {["Hari Ini", "Besok", "Minggu Depan"].map((f) => (
-        <button
-          key={f}
-          onClick={() => setTimeFilter(f)}
-          style={{
-            display: "block",
-            width: "100%",
-            textAlign: "left",
-            padding: "11px 14px",
-            border: "none",
-            background: timeFilter === f ? "#186d22" : "#fff",
-            color: timeFilter === f ? "#fff" : "#374151",
-            fontWeight: 600,
-            fontSize: 12,
-            cursor: "pointer",
-            fontFamily: "'Plus Jakarta Sans', sans-serif",
-            borderBottom: "1px solid #f3f4f6",
-            transition: "all .15s",
-          }}
-        >
-          {f}
-        </button>
-      ))}
-    </div>
+   
+   
 
 
  {/* Grid slot */}
       <div
         ref={slotGridRef}
         style={{
-          flex: 1,
+          width: "100%",
           padding: 14,
-          alignSelf: "flex-start",
           pointerEvents: isSelectedPanelOpen ? "none" : "auto",
           userSelect: isSelectedPanelOpen ? "none" : "auto",
         }}
       >
-      <div style={{ marginBottom: 10 }}>
+      <div
+        style={{
+          marginBottom: 10,
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+        }}
+      >
+        {/* [NEW CODE] LEGENDA STATUS */}
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 10,
+            marginBottom: 12,
+          }}
+        >
+          <span style={{ color:"#186d22", fontSize:12, fontWeight:600 }}>🟢 Tersedia</span>
+          <span style={{ color:"#d97706", fontSize:12, fontWeight:600 }}>🟡 Pending</span>
+          <span style={{ color:"#dc2626", fontSize:12, fontWeight:600 }}>🔴 Booking</span>
+          <span style={{ color:"#6b7280", fontSize:12, fontWeight:600 }}>⚪ Dibatalkan</span>
+          <span style={{ color:"#2563eb", fontSize:12, fontWeight:600 }}>🔵 Selesai</span>
+          <span style={{ color:"#7c3aed", fontSize:12, fontWeight:600 }}>🟣 Libur</span>
+        </div>
+
         <span
           style={{
             border: "1px solid #e5e7eb",
@@ -595,10 +621,28 @@ function CekJadwal({ field, slotGridRef, initialSelectedSlots = [], initialOpenB
           {loadingJadwal
             ? "Memuat..."
             : `${jadwalData.filter((s) => s.status === "tersedia").length} Jadwal Tersedia`}
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M6 9l6 6 6-6" />
-          </svg>
         </span>
+
+      {hasMultipleCourts && (
+  <span
+    style={{
+      border: "1px solid #e5e7eb",
+      borderRadius: 20,
+      padding: "4px 14px",
+      fontSize: 12,
+      fontWeight: 700,
+      color: "#374151",
+      background: "#fff",
+      fontFamily: "'Plus Jakarta Sans', sans-serif",
+      display: "inline-flex",
+      alignItems: "center",
+    }}
+  >
+    {selectedCourt === "Pilih Jadwal Disini"
+      ? "Lihat Semua Jadwal"
+      : selectedCourt}
+  </span>
+)}
       </div>
 
       {loadingJadwal ? (
@@ -626,6 +670,9 @@ function CekJadwal({ field, slotGridRef, initialSelectedSlots = [], initialOpenB
             const isAvailable = slot.status === "tersedia";
             const isPending = slot.status === "pending";
             const isBooking = slot.status === "booking";
+            const isCancelled = slot.status === "dibatalkan";
+            const isFinished = slot.status === "selesai";
+            const isHoliday = slot.status === "libur";
             const key = `${slot.tanggal}-${slot.jam_mulai}-${slot.jam_selesai}-${slot.court_no}`;
             const isSelected = selectedSlots.includes(key);
 
@@ -671,13 +718,23 @@ function CekJadwal({ field, slotGridRef, initialSelectedSlots = [], initialOpenB
                     ? "#fef3c7"
                     : isBooking
                     ? "#fee2e2"
+                    : isCancelled
+                    ? "#f3f4f6"
+                    : isFinished
+                    ? "#dbeafe"
+                    : isHoliday
+                    ? "#ede9fe"
                     : "#e5e7eb",
                   boxShadow: isSelected
                     ? "0 12px 28px rgba(22,163,74,0.18)"
                     : "0 10px 24px rgba(15,23,42,0.06)",
                   backdropFilter: "blur(8px)",
                   WebkitBackdropFilter: "blur(8px)",
-                  cursor: isAvailable ? "pointer" : "not-allowed",
+                  cursor: isViewAllMode
+                    ? "default"
+                    : isAvailable
+                    ? "pointer"
+                    : "not-allowed",
                   transition: "all .18s ease",
                   fontFamily: "'Plus Jakarta Sans', sans-serif",
                   textAlign: "left",
@@ -708,24 +765,50 @@ function CekJadwal({ field, slotGridRef, initialSelectedSlots = [], initialOpenB
                       ? "#d97706"
                       : isBooking
                       ? "#dc2626"
+                      : isCancelled
+                      ? "#6b7280"
+                      : isFinished
+                      ? "#2563eb"
+                      : isHoliday
+                      ? "#7c3aed"
                       : "#374151",
                   }}
                 >
-                  {slot.status.toUpperCase()}
+                  {
+                    slot.status === "tersedia"
+                      ? "TERSEDIA"
+                      : slot.status === "pending"
+                      ? "PENDING"
+                      : slot.status === "booking"
+                      ? "BOOKING"
+                      : slot.status === "dibatalkan"
+                      ? "DIBATALKAN"
+                      : slot.status === "selesai"
+                      ? "SELESAI"
+                      : slot.status === "libur"
+                      ? "LIBUR"
+                      : slot.status.toUpperCase()
+                  }
                 </div>
 
-                <div
-                  style={{
-                    position: "absolute",
-                    top: 12,
-                    right: 12,
-                    width: 18,
-                    height: 18,
-                    borderRadius: "50%",
-                    border: isSelected ? "2px solid #186d22" : "2px solid #9ca3af",
-                    background: isSelected ? "#186d22" : "#fff",
-                  }}
-                />
+                {!isViewAllMode && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: 12,
+                      right: 12,
+                      width: 18,
+                      height: 18,
+                      borderRadius: "50%",
+                      border: isSelected
+                        ? "2px solid #186d22"
+                        : "2px solid #9ca3af",
+                      background: isSelected
+                        ? "#186d22"
+                        : "#fff",
+                    }}
+                  />
+                )}
 
                 {!isAvailable && (
                   <div
@@ -1055,6 +1138,7 @@ const handleScrollToJadwal = () => {
   });
 };
 
+// MENYIMPAN TOKEN
 useEffect(() => {
   const token = localStorage.getItem("token");
 
@@ -1062,6 +1146,7 @@ useEffect(() => {
     navigate(`/login?next=${encodeURIComponent(location.pathname)}`);
   }
 }, []);
+
 useEffect(() => {
   const fetchDetail = async () => {
     try {

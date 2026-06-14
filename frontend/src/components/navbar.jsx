@@ -79,43 +79,10 @@ if (isCashPage) return null;
     : isDetailLapangan || scrolled
     ? "0 2px 20px rgba(0,0,0,0.3)"
     : "none",
-  borderBottom: isDetailLapangan || scrolled
-    ? "1px solid rgba(74,222,128,0.15)"
-    : "none",
   overflow: "visible", // ✅ NEW
 }}
 >
-  {/* GLOW KANAN */}
-<div
-  style={{
-    position: "absolute",
-    top: -80,
-    right: -120,
-    width: 260,
-    height: 260,
-    background:
-      "radial-gradient(circle, rgba(24,109,34,0.22) 0%, rgba(22,163,74,0.10) 35%, rgba(10,46,20,0.02) 65%, transparent 100%)",
-    pointerEvents: "none",
-    zIndex: 0,
-    filter: "blur(8px)", // ✅ NEW
-  }}
-/>
-
-  {/* GLOW KIRI */}
-<div
-  style={{
-    position: "absolute",
-    top: -80,
-    left: -120,
-    width: 260,
-    height: 260,
-    background:
-      "radial-gradient(circle, rgba(24,109,34,0.22) 0%, rgba(22,163,74,0.10) 35%, rgba(10,46,20,0.02) 65%, transparent 100%)",
-    pointerEvents: "none",
-    zIndex: 0,
-    filter: "blur(8px)", // ✅ NEW
-  }}
-/>
+  
 
   <div className="max-w-7xl mx-auto px-6 lg:px-10" style={{ position: "relative", zIndex: 1 }}>
     <div className="flex items-center justify-between h-16">
@@ -128,7 +95,10 @@ if (isCashPage) return null;
                 isLoginPage ? "text-gray-900" : "text-white"
               }`}
             >
-              Book<span className="text-green-500">Lap</span>
+              <div className="mb-2 text-[32px] font-extrabold tracking-tight">
+                <span>Book</span>
+                <span className="text-[#186d22]">Lap</span>
+              </div>
             </span>
           </Link>
 

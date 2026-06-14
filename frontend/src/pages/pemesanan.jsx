@@ -334,7 +334,12 @@ export default function Pemesanan() {
   }, []);
 
   const selectedSlotCount = selectedSlots.length;
-  const bookingDurationMinutes = totalDurationMinutes || selectedSlotCount * 60;
+
+const bookingDurationMinutes =
+  totalDurationMinutes || selectedSlotCount * 60;
+
+console.log("SELECTED SLOTS =", selectedSlots);
+console.log("BOOKING DURATION =", bookingDurationMinutes);
 
   const biayaSewa = useMemo(() => {
     return selectedSlots.reduce((sum, slot) => {
@@ -478,10 +483,30 @@ export default function Pemesanan() {
       paymentMethod === "transfer" ? Number(selectedTransfer?.fee || 0) : 0;
 
     const totalBayar = subtotal + biayaAdmin;
+    console.log("===============");
+console.log("SLOT COUNT =", selectedSlots.length);
+console.log(
+  "BOOKING DURATION MINUTES =",
+  bookingDurationMinutes
+);
+console.log("===============");
 
     try {
       setSubmitLoading(true);
       setSubmitError("");
+
+      // ===== NEW CODE =====
+      const selectedServiceDetails = services
+        .filter((item) => selectedServices[item.id] > 0)
+        .map((item) => ({
+          id: item.id,
+          nama_layanan: item.nama_layanan,
+          qty: selectedServices[item.id],
+          harga_satuan: Number(item.harga_satuan || 0),
+          subtotal:
+            Number(item.harga_satuan || 0) *
+            selectedServices[item.id],
+        }));
 
       const res = await api.post("/pemesanan", {
         user_id: userId,
@@ -491,6 +516,7 @@ export default function Pemesanan() {
           paymentMethod === "transfer" ? selectedTransferMethod : null,
         nama_lapangan: field?.nama,
         selectedSlots,
+        selectedServiceDetails,
         nama_pemesan: namaPemesan,
         email: emailPemesan,
         no_whatsapp: noWhatsapp,
@@ -508,6 +534,10 @@ export default function Pemesanan() {
 
       const result = res.data;
       const pemesananBaru = result?.data || result;
+      console.log(
+  "PEMESANAN BARU =",
+  pemesananBaru
+);
 
       if (!pemesananBaru?.id) {
         throw new Error("Data pemesanan tidak diterima dari server.");
@@ -540,11 +570,12 @@ export default function Pemesanan() {
             totalDurationMinutes: bookingDurationMinutes,
             selectedTransferMethod,
             selectedTransferFee: biayaAdmin,
+            selectedServiceDetails,
             noWhatsapp,
             vaNumber: pemesananBaru.va_number,
             paymentReference: pemesananBaru.payment_reference,
             paymentChannel: pemesananBaru.payment_channel,
-            paymentExpiresAt: Date.now() + 60 * 60 * 1000,
+            paymentExpiresAt: pemesananBaru.payment_expires_at,
           },
         });
         return;
@@ -559,6 +590,7 @@ export default function Pemesanan() {
             selectedSlots,
             totalPrice: totalBayar,
             totalDurationMinutes: bookingDurationMinutes,
+            selectedServiceDetails,
             paymentMethod: "cash",
             namaPemesan,
             emailPemesan,

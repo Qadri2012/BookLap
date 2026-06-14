@@ -21,10 +21,16 @@ const metodePembayaranRoutes = require("./routes/v1/metodePembayaran");
 const metodeTransferRoutes = require("./routes/v1/metodeTransfer");
 const pemesananRoutes = require("./routes/v1/pemesanan");
 const reviewRoutes = require("./routes/v1/review");
-
+const adminInviteRoutes = require("./routes/v1/adminInvite");
+const adminRoutes = require("./routes/v1/admin");
 const MetodePembayaran = require("./models/metodePembayaran");
 const MetodeTransfer = require("./models/metodeTransfer");
 const Pemesanan = require("./models/pemesanan");
+const AdminMaster = require("./models/adminMaster");
+const AdminInvite = require("./models/adminInvite");
+// NEW: load sequelize associations
+require("./models/associations");
+require("./jobs/bookingScheduler");
 
 // 🔥 UPLOAD CLOUDINARY
 const upload = require("./middleware/upload");
@@ -57,6 +63,12 @@ app.use(
   helmet({
     crossOriginResourcePolicy: false,
   })
+);
+
+const path = require("path");
+app.use(
+  "/uploads",
+  express.static(path.join(__dirname, "uploads"))
 );
 
 // ✅ NEW: limiter khusus auth
@@ -330,6 +342,8 @@ app.use("/api/v1/metode-pembayaran", metodePembayaranRoutes);
 app.use("/api/v1/metode-transfer", metodeTransferRoutes);
 app.use("/api/v1/pemesanan", pemesananRoutes);
 app.use("/api/v1/review", reviewRoutes);
+app.use("/api/v1/admin-invites", adminInviteRoutes);
+app.use("/api/v1/admin", adminRoutes);
 
 // START SERVER
 const PORT = 5000;

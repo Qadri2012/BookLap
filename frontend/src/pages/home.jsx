@@ -7,7 +7,10 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { getLapangan } from "../services/api";
 import Footer from "../components/Footer";
 import gambar4 from "../assets/gambar4.png"; // ✅ NEW
-
+// ✅ NEW: icon untuk kartu fitur Home
+import { FaSearch, FaCalendarAlt, FaMoneyBillWave, FaClipboardList } from "react-icons/fa";
+// ✅ NEW: ikon statistik bawah map
+import { FaBuilding, FaMapMarkerAlt, FaBolt } from "react-icons/fa";
 
 import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
@@ -24,11 +27,12 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 });
 // ── DATA ────────────────────────────────────────────────────────────────────
+// ✅ NEW: icon fitur Home memakai react-icons
 const FEATURES = [
-  { icon: "🔍", title: "Temukan Lapangan", desc: "Dari mana saja" },
-  { icon: "📅", title: "Reservasi Praktis", desc: "Beberapa langkah" },
-  { icon: "💰", title: "Harga Jelas", desc: "Transparan & akurat" },
-  { icon: "🗓", title: "Atur Jadwal", desc: "Mudah & fleksibel" },
+  { icon: <FaSearch size={40} color="#000000" />, title: "Temukan Lapangan", desc: "Dari mana saja" },
+  { icon: <FaCalendarAlt size={40} color="#000000" />, title: "Reservasi Praktis", desc: "Beberapa langkah" },
+  { icon: <FaMoneyBillWave size={40} color="#000000"/>, title: "Harga Jelas", desc: "Transparan & akurat" },
+  { icon: <FaClipboardList size={40} color="#000000" />, title: "Atur Jadwal", desc: "Mudah & fleksibel" },
 ];
 
 
@@ -502,6 +506,7 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
   return (R * c).toFixed(1);
 }
 
+// ✅ NEW: map dibuat full mengikuti container
 function LapanganMap({ points, userCoords }) {
   const validPoints = points
     .map((f) => ({
@@ -518,20 +523,11 @@ function LapanganMap({ points, userCoords }) {
 
   return (
     <div
-  className="overflow-hidden border border-white/10 shadow-2xl bg-white"
-  style={{
-    borderRadius: "28px",
-
-    // ✅ tambah panjang kanan kiri
-    width: "calc(100% + 160px)",
-marginLeft: "-80px",
-
-    height: "360px",
-
-    // ✅ naik sedikit
-    marginTop: "-15px",
-  }}
->
+      className="w-full h-full overflow-hidden bg-white"
+      style={{
+        borderRadius: "24px",
+      }}
+    >
       <MapContainer
         center={center}
         zoom={13}
@@ -551,11 +547,9 @@ marginLeft: "-80px",
                 <div style={{ fontWeight: 700, marginBottom: "4px" }}>
                   {f.nama}
                 </div>
-
                 <div style={{ fontSize: "12px", marginBottom: "4px" }}>
                   {f.alamat}
                 </div>
-
                 {userCoords && (
                   <div
                     style={{
@@ -574,7 +568,6 @@ marginLeft: "-80px",
                     )} km
                   </div>
                 )}
-
                 <div style={{ fontSize: "12px", color: "#166534" }}>
                   Rp {Number(f.harga || 0).toLocaleString("id-ID")}/jam
                 </div>
@@ -1163,7 +1156,10 @@ function detectLocation() {
         style={{ textShadow: "0 2px 12px rgba(0,0,0,0.6)" }}
       >
         Selamat Datang di Website{" "}
-        <span className="text-green-400">BookLap</span>
+       
+                <span>Book</span>
+                <span className="text-[#186d22]">Lap</span>
+             
       </h1>
       <p
         className="mt-5 max-w-md leading-relaxed"
@@ -1457,7 +1453,7 @@ function detectLocation() {
               }
             }}
           >
-            <div style={{ fontSize: "30px", marginBottom: "10px" }}>{icon}</div>
+            <div style={{ marginBottom: "10px" }}>{icon}</div>
             <h3 style={{
               fontWeight: 700,
               fontSize: "13.5px",
@@ -1736,199 +1732,265 @@ function detectLocation() {
   </div>
 </section>
 
-{/* WHY BOOKLAP */}
+{/* WHY BOOKLAP — PETA */}
 <section
-  className="relative w-full py-20 overflow-hidden"
+  className="relative w-full overflow-hidden"
   style={{
     position: "relative",
     zIndex: 5,
-    overflow: "hidden",
     backgroundColor: "#186d22",
     marginTop: "-120px",
-    paddingBottom: "50px",
+    paddingBottom: "80px",
   }}
 >
-  {/* ✅ SVG concave sudut kiri atas — sama persis dengan FAQ tapi fill #186d22 */}
-  <svg
-    viewBox="0 0 220 120"
-    preserveAspectRatio="none"
-    style={{
-      position: "absolute",
-      top: "-120px",
-      left: 0,
-      width: "220px",
-      height: "121px",
-      zIndex: 21,
-      pointerEvents: "none",
-      display: "block",
-    }}
-  >
-    <path
-      d="M0,120 L0,0 C0,70 60,120 140,120 L220,120 Z"
-      fill="#186d22"   // ✅ warna WHY
-    />
+  {/* SVG concave kiri atas */}
+  <svg viewBox="0 0 220 120" preserveAspectRatio="none"
+    style={{ position:"absolute", top:"-120px", left:0, width:"220px", height:"121px", zIndex:21, pointerEvents:"none", display:"block" }}>
+    <path d="M0,120 L0,0 C0,70 60,120 140,120 L220,120 Z" fill="#0d3d1a" />
+  </svg>
+  {/* SVG concave kanan atas */}
+  <svg viewBox="0 0 220 120" preserveAspectRatio="none"
+    style={{ position:"absolute", top:"-120px", right:0, width:"220px", height:"121px", zIndex:21, pointerEvents:"none", display:"block", transform:"scaleX(-1)" }}>
+    <path d="M0,120 L0,0 C0,70 60,120 140,120 L220,120 Z" fill="#0d3d1a" />
   </svg>
 
-  {/* ✅ SVG concave sudut kanan atas — mirror */}
-  <svg
-    viewBox="0 0 220 120"
-    preserveAspectRatio="none"
-    style={{
-      position: "absolute",
-      top: "-120px",
-      right: 0,
-      width: "220px",
-      height: "121px",
-      zIndex: 21,
-      pointerEvents: "none",
-      display: "block",
-      transform: "scaleX(-1)",
-    }}
-  >
-    <path
-      d="M0,120 L0,0 C0,70 60,120 140,120 L220,120 Z"
-      fill="#186d22"   // ✅ warna WHY
-    />
-  </svg>
+  {/* Dekorasi lingkaran blur background */}
+  <div style={{ position:"absolute", top:"-60px", right:"-60px", width:"400px", height:"400px", borderRadius:"50%", background:"rgba(74,222,128,0.04)", pointerEvents:"none" }} />
+  <div style={{ position:"absolute", bottom:"-80px", left:"-80px", width:"500px", height:"500px", borderRadius:"50%", background:"rgba(22,163,74,0.06)", pointerEvents:"none" }} />
 
-  <div className={`relative z-10 ${px} pt-16`}>
-  <div className="mb-12">
-    <p className="text-xs font-semibold text-green-400 uppercase tracking-widest mb-2">
-      Lokasi BookLap
-    </p>
+  <div className={`relative z-10 ${px} pt-24`}>
 
-    <h2 className="text-3xl sm:text-4xl font-bold text-black tracking-tight">
-      Titik Lokasi Lapangan di Peta
-    </h2>
+    {/* ── HEADER ── */}
+    <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-start", marginBottom:"32px", gap:"8px" }}>
+      <div style={{ display:"flex", alignItems:"center", gap:"10px" }}>
+        <div style={{ width:"32px", height:"3px", borderRadius:"99px", background:"linear-gradient(to right, #4ade80, #22c55e)" }} />
+        <p style={{ fontSize:"11px", fontWeight:700, color:"#4ade80", letterSpacing:"0.18em", textTransform:"uppercase" }}>
+          Lokasi BookLap
+        </p>
+      </div>
 
-    {/* <p className="text-white/70 mt-3 max-w-2xl">
-      Berikut sebaran lapangan yang tersimpan di database BookLap.
-    </p> */}
-  </div>
+      <h2 style={{
+        fontSize:"clamp(24px, 3vw, 38px)",
+        fontWeight:800,
+        color:"#ffffff",
+        letterSpacing:"-0.02em",
+        lineHeight:1.15,
+        fontFamily:"'Plus Jakarta Sans', sans-serif",
+      }}>
+        Temukan Lapangan{" "}
+        <span style={{
+          background:"linear-gradient(135deg, #4ade80, #22c55e)",
+          WebkitBackgroundClip:"text",
+          WebkitTextFillColor:"transparent",
+        }}>Terdekat</span>{" "}
+        dari Lokasimu
+      </h2>
 
-  {/* CEK LOKASI */}
-<div
-  style={{
-    marginBottom: "24px",
-    marginTop: "-10px",
-  }}
->
-  <p
-    style={{
-      color: "rgba(255,255,255,0.85)",
-      fontSize: "14px",
-      marginBottom: "12px",
-      fontWeight: 500,
-    }}
-  >
-    Cek seberapa jauh lokasi anda dari lapangan BookLap
-  </p>
-
-  <div
-    style={{
-      display: "flex",
-      gap: "12px",
-      alignItems: "center",
-      flexWrap: "wrap",
-    }}
-  >
-    <input
-      type="text"
-      value={userLocation}
-      onChange={(e) => setUserLocation(e.target.value)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") {
-          searchManualLocation();
-        }
-      }}
-      placeholder="Masukkan alamat atau gunakan lokasi saat ini"
-      style={{
-        flex: 1,
-        minWidth: "260px",
-        height: "52px",
-        borderRadius: "16px",
-        border: "1px solid rgba(255,255,255,0.12)",
-        background: "rgba(255,255,255,0.10)",
-        color: "#fff",
-        padding: "0 18px",
-        outline: "none",
-        fontSize: "14px",
-        backdropFilter: "blur(10px)",
-      }}
-    />
-
-    <button
-  onClick={detectLocation}
-  aria-label="Gunakan lokasi saat ini"
-  title="Gunakan lokasi saat ini"
-  style={{
-    width: "52px",
-    height: "52px",
-    borderRadius: "16px",
-    border: "none",
-    background: "#22c55e",
-    color: "#fff",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    boxShadow: "0 8px 24px rgba(34,197,94,0.35)",
-  }}
->
-  <svg
-    width="22"
-    height="22"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M12 2v3" />
-    <path d="M12 19v3" />
-    <path d="M4.93 4.93l2.12 2.12" />
-    <path d="M16.95 16.95l2.12 2.12" />
-    <path d="M2 12h3" />
-    <path d="M19 12h3" />
-    <path d="M4.93 19.07l2.12-2.12" />
-    <path d="M16.95 7.05l2.12-2.12" />
-    <circle cx="12" cy="12" r="3" />
-  </svg>
-</button>
-<button
-  onClick={searchManualLocation}
-  style={{
-    height: "52px",
-    padding: "0 18px",
-    borderRadius: "16px",
-    border: "none",
-    background: "#ffffff",
-    color: "#166534",
-    fontWeight: 700,
-    cursor: "pointer",
-  }}
->
-  Cari
-</button>
-  </div>
-
-  {distanceText && (
-    <div
-      style={{
-        marginTop: "14px",
-        color: "#86efac",
-        fontSize: "14px",
-        fontWeight: 600,
-      }}
-    >
-      {distanceText}
+      <p style={{ fontSize:"14px", color:"rgba(255,255,255,0.5)", maxWidth:"480px", lineHeight:1.7, marginTop:"4px" }}>
+        Masukkan alamatmu atau aktifkan GPS untuk mengetahui lapangan BookLap yang paling dekat dengan lokasimu saat ini.
+      </p>
     </div>
-  )}
-</div>
 
-<LapanganMap points={mapPoints} userCoords={userCoords} />
-</div>
+    {/* ── SEARCH BAR ── */}
+    <div style={{
+      display:"flex",
+      gap:"10px",
+      alignItems:"center",
+      marginBottom:"20px",
+      flexWrap:"wrap",
+    }}>
+      {/* Input */}
+      <div style={{
+        flex:1,
+        minWidth:"260px",
+        position:"relative",
+        display:"flex",
+        alignItems:"center",
+      }}>
+        {/* Ikon search di dalam input */}
+        <svg
+          style={{ position:"absolute", left:"16px", color:"rgba(255,255,255,0.4)", pointerEvents:"none" }}
+          width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+        >
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        <input
+          type="text"
+          value={userLocation}
+          onChange={(e) => setUserLocation(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") searchManualLocation(); }}
+          placeholder="Cari alamat, kelurahan, atau nama tempat..."
+          style={{
+            width:"100%",
+            height:"52px",
+            paddingLeft:"44px",
+            paddingRight:"18px",
+            borderRadius:"14px",
+            border:"1.5px solid rgba(255,255,255,0.12)",
+            background:"rgba(255,255,255,0.08)",
+            color:"#fff",
+            fontSize:"13.5px",
+            outline:"none",
+            backdropFilter:"blur(12px)",
+            fontFamily:"'Plus Jakarta Sans', sans-serif",
+            transition:"border-color 0.2s, background 0.2s",
+          }}
+          onFocus={e => {
+            e.target.style.borderColor = "rgba(74,222,128,0.5)";
+            e.target.style.background  = "rgba(255,255,255,0.12)";
+          }}
+          onBlur={e => {
+            e.target.style.borderColor = "rgba(255,255,255,0.12)";
+            e.target.style.background  = "rgba(255,255,255,0.08)";
+          }}
+        />
+      </div>
+
+      {/* Tombol GPS */}
+      <button
+        onClick={detectLocation}
+        title="Gunakan lokasi saat ini"
+        style={{
+          width:"52px", height:"52px",
+          borderRadius:"14px",
+          border:"1.5px solid rgba(74,222,128,0.35)",
+          background:"rgba(34,197,94,0.15)",
+          color:"#4ade80",
+          cursor:"pointer",
+          display:"flex", alignItems:"center", justifyContent:"center",
+          backdropFilter:"blur(12px)",
+          transition:"all 0.2s",
+          flexShrink:0,
+        }}
+        onMouseEnter={e => {
+          e.currentTarget.style.background = "rgba(34,197,94,0.28)";
+          e.currentTarget.style.borderColor = "rgba(74,222,128,0.6)";
+        }}
+        onMouseLeave={e => {
+          e.currentTarget.style.background = "rgba(34,197,94,0.15)";
+          e.currentTarget.style.borderColor = "rgba(74,222,128,0.35)";
+        }}
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M12 2v3M12 19v3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M2 12h3M19 12h3M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12"/>
+        </svg>
+      </button>
+
+      {/* Tombol Cari */}
+      <button
+        onClick={searchManualLocation}
+        style={{
+          height:"52px",
+          padding:"0 24px",
+          borderRadius:"14px",
+          border:"none",
+          background:"linear-gradient(135deg, #22c55e, #16a34a)",
+          color:"#fff",
+          fontWeight:700,
+          fontSize:"13.5px",
+          cursor:"pointer",
+          fontFamily:"'Plus Jakarta Sans', sans-serif",
+          boxShadow:"0 6px 20px rgba(34,197,94,0.35)",
+          transition:"all 0.2s",
+          flexShrink:0,
+          letterSpacing:"0.01em",
+        }}
+        onMouseEnter={e => {
+          e.currentTarget.style.transform = "translateY(-1px)";
+          e.currentTarget.style.boxShadow = "0 10px 28px rgba(34,197,94,0.45)";
+        }}
+        onMouseLeave={e => {
+          e.currentTarget.style.transform = "translateY(0)";
+          e.currentTarget.style.boxShadow = "0 6px 20px rgba(34,197,94,0.35)";
+        }}
+      >
+        Cari Lokasi
+      </button>
+    </div>
+
+    {/* Status text */}
+    {distanceText && (
+      <div style={{
+        display:"inline-flex", alignItems:"center", gap:"8px",
+        marginBottom:"16px",
+        padding:"8px 14px",
+        borderRadius:"10px",
+        background:"rgba(74,222,128,0.12)",
+        border:"1px solid rgba(74,222,128,0.25)",
+        color:"#86efac",
+        fontSize:"13px",
+        fontWeight:600,
+      }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+          <circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/>
+        </svg>
+        {distanceText}
+      </div>
+    )}
+
+    {/* ── PETA ── */}
+      <div
+        style={{
+          borderRadius: "24px",
+          overflow: "hidden",
+          border: "1px solid rgba(255,255,255,0.10)",
+          boxShadow: "0 24px 64px rgba(0,0,0,0.4)",
+          height: "440px",
+          position: "relative",
+          background: "#fff",
+        }}
+      >
+      {/* Label overlay kiri atas */}
+      <div style={{
+        position:"absolute", top:"14px", left:"14px",
+        zIndex:999, pointerEvents:"none",
+        background:"rgba(13,61,26,0.85)",
+        backdropFilter:"blur(10px)",
+        border:"1px solid rgba(74,222,128,0.25)",
+        borderRadius:"10px",
+        padding:"8px 14px",
+        display:"flex", alignItems:"center", gap:"7px",
+      }}>
+        <div style={{ width:"8px", height:"8px", borderRadius:"50%", background:"#22c55e", boxShadow:"0 0 0 3px rgba(34,197,94,0.3)" }} />
+        <span style={{ fontSize:"12px", fontWeight:700, color:"#fff" }}>
+          {mapPoints.length} Lapangan Tersedia
+        </span>
+      </div>
+
+      <LapanganMap points={mapPoints} userCoords={userCoords} />
+    </div>
+
+    {/* ── STATS BAWAH PETA ── */}
+    <div style={{
+      display:"grid",
+      gridTemplateColumns:"repeat(3, 1fr)",
+      gap:"12px",
+      marginTop:"16px",
+    }}>
+        {[
+          { icon: <FaBuilding size={22} color="#000000" />, value: mapPoints.length + "+", label: "Lapangan Terdaftar" },
+          { icon: <FaMapMarkerAlt size={22} color="#000000" />, value: "Parepare", label: "Kota Tersedia" },
+          { icon: <FaBolt size={22} color="#000000" />, value: "Real-time", label: "Update Jadwal" },
+        ].map(({ icon, value, label }) => (
+        <div key={label} style={{
+          display:"flex", alignItems:"center", gap:"12px",
+          padding:"14px 18px",
+          borderRadius:"14px",
+          background:"rgba(255,255,255,0.06)",
+          border:"1px solid rgba(255,255,255,0.09)",
+          backdropFilter:"blur(10px)",
+        }}>
+          <span style={{ fontSize:"22px", flexShrink:0 }}>{icon}</span>
+          <div>
+            <p style={{ fontSize:"16px", fontWeight:800, color:"#fff", lineHeight:1, marginBottom:"2px" }}>{value}</p>
+            <p style={{ fontSize:"11px", color:"rgba(255,255,255,0.45)", fontWeight:500 }}>{label}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+
+  </div>
 </section>
 
 {/* ✅ SVG CONCAVE BAWAH WHY */}

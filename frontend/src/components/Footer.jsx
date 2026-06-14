@@ -113,7 +113,10 @@ export default function Footer() {
               </div>
               <div>
                 <h3 style={{ color: "#fff", fontWeight: 800, fontSize: 24, letterSpacing: "-0.02em", lineHeight: 1 }}>
-                  Book<span style={{ color: "#4ade80" }}>Lap</span>
+                  <div className="mb-2 text-[32px] font-extrabold tracking-tight">
+            <span>Book</span>
+            <span className="text-[#186d22]">Lap</span>
+          </div>
                 </h3>
                 <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 11, marginTop: 2 }}>
                   Booking lapangan jadi lebih mudah

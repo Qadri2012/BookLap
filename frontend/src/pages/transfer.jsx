@@ -10,6 +10,7 @@ import gopayLogo from "../assets/bank/gopay.png";
 import ovoLogo from "../assets/bank/ovo.png";
 import danaLogo from "../assets/bank/dana.png";
 import shopeepayLogo from "../assets/bank/shopeepay.png";
+import { api } from "../services/api";
 import {
   Check,
   Clock3,
@@ -53,36 +54,138 @@ const rupiah = (value) => `Rp ${Number(value || 0).toLocaleString("id-ID")}`;
 export default function Transfer() {
   const location = useLocation();
   const navigate = useNavigate(); // ✅ NEW
-  const [copied, setCopied] = useState(false);
+const [copied, setCopied] = useState(false);
 
-  const {
-    field,
-    selectedSlots = [],
-    totalPrice = 0,
-    totalDurationMinutes = 0,
-    selectedTransferMethod = "",
-    vaNumber = "",
-    paymentReference = "",
-    paymentChannel = "",
-    paymentExpiresAt: initialPaymentExpiresAt = Date.now() + 60 * 60 * 1000,
-  } = location.state || {};
+  const stateData = location.state || {};
+
+  const pemesananId =
+    stateData?.pemesananId ||
+    localStorage.getItem("pemesananId");
+
+  // ✅ STATE DULU sebelum dipakai di bawah
+  const [paymentData, setPaymentData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [timeLeft, setTimeLeft] = useState(60 * 60 * 1000);
+
+  // ✅ selectedTransferMethod pakai useMemo agar reaktif setelah paymentData terisi
+  const selectedTransferMethod = useMemo(() => {
+    if (stateData.selectedTransferMethod) return stateData.selectedTransferMethod;
+    const va = paymentData?.va_number || "";
+    if (va.startsWith("009")) return "bni";
+    if (va.startsWith("002")) return "bri";
+    if (va.startsWith("008")) return "mandiri";
+    if (va.startsWith("451")) return "bsi";
+    return "";
+  }, [stateData.selectedTransferMethod, paymentData?.va_number]);
+
+  const totalPrice = stateData.totalPrice || 0;
+  const selectedSlots = stateData.selectedSlots || [];
+  const field = stateData.field || {};
+  const totalDurationMinutes = stateData.totalDurationMinutes || 0;
+
+  // ✅ selectedServiceDetails
+  const selectedServiceDetails = useMemo(() => {
+    return Array.isArray(paymentData?.detail_layanan)
+      ? paymentData.detail_layanan
+      : [];
+  }, [paymentData]);
+
+useEffect(() => {
+ const fetchPemesanan = async () => {
+  try {
+    if (!pemesananId) return;
+
+    const res = await api.get(
+      `/pemesanan/${pemesananId}`
+    );
+
+    const data = res.data;
+
+    if (!data) return;
+
+    setPaymentData(data);
+
+    if (
+      data?.payment_expires_at
+    ) {
+      const deadline =
+        new Date(
+          data.payment_expires_at
+        ).getTime();
+
+      const now =
+        Date.now();
+
+      setTimeLeft(
+        Math.max(
+          deadline - now,
+          0
+        )
+      );
+    }
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+  fetchPemesanan();
+}, [pemesananId]);
+
+useEffect(() => {
+  if (!paymentData?.payment_expires_at)
+    return;
+
+  const deadline = new Date(
+    paymentData.payment_expires_at
+  ).getTime();
+
+  if (isNaN(deadline))
+    return;
+
+  const updateTimer = () => {
+    const remaining =
+      deadline - Date.now();
+
+    setTimeLeft(
+      remaining > 0
+        ? remaining
+        : 0
+    );
+  };
+
+  updateTimer();
+
+  const interval = setInterval(
+    updateTimer,
+    1000
+  );
+
+  return () =>
+    clearInterval(interval);
+}, [
+  paymentData?.payment_expires_at,
+]);
+
 
   const isBankMethod = ["bni", "bri", "bsi", "mandiri"].includes(
     selectedTransferMethod
   );
 
   const paymentKind =
-    paymentChannel ||
+    paymentData?.payment_channel ||
     (isBankMethod
       ? "bank"
       : selectedTransferMethod === "indomaret"
       ? "minimarket"
       : "ewallet");
 
-  const paymentCode = vaNumber || paymentReference || "-";
+  const paymentCode = paymentData?.va_number || paymentData?.payment_reference || "-";
   const bankLabel = bankLabelMap[selectedTransferMethod] || "Pembayaran";
   const paymentLogo = paymentLogoMap[selectedTransferMethod] || null;
-  const totalPayment = rupiah(totalPrice);
+  const totalPayment = rupiah(
+  paymentData?.total_bayar ||
+  totalPrice
+);
 
   const paymentLabel =
     paymentKind === "bank"
@@ -118,73 +221,86 @@ export default function Transfer() {
     setOpenSection(paymentKind === "bank" ? "mbanking" : "bayar");
   }, [paymentKind]);
 
-  const [timeLeft, setTimeLeft] = useState(() =>
-    Math.max(0, initialPaymentExpiresAt - Date.now())
-  );
+// const [timeLeft, setTimeLeft] = useState(
+//   60 * 60 * 1000
+// );
 
-  useEffect(() => {
-    const tick = () => {
-      setTimeLeft(Math.max(0, initialPaymentExpiresAt - Date.now()));
-    };
 
-    tick();
-    const id = setInterval(tick, 1000);
-
-    return () => clearInterval(id);
-  }, [initialPaymentExpiresAt]);
-
+ 
   const pad2 = (num) => String(num).padStart(2, "0");
   const hours = pad2(Math.floor(timeLeft / 3600000));
   const minutes = pad2(Math.floor((timeLeft % 3600000) / 60000));
   const seconds = pad2(Math.floor((timeLeft % 60000) / 1000));
+ 
 
-  const detailItems = useMemo(
-    () => [
-      {
-        icon: CalendarDays,
-        title: "Tanggal & Waktu",
-        value: selectedSlots?.[0]
-          ? new Date(`${selectedSlots[0].tanggal}T00:00:00`).toLocaleDateString(
-              "id-ID",
-              {
-                weekday: "long",
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-              }
-            )
-          : "-",
-        subvalue: selectedSlots?.[0]?.jam_mulai
-          ? `${String(selectedSlots[0].jam_mulai).slice(0, 5)} - ${String(
-              selectedSlots[0].jam_selesai || ""
-            ).slice(0, 5)}`
+
+  const detailList =
+  paymentData?.detail_pemesanan || [];
+
+const firstDetail = detailList[0];
+
+const lastDetail =
+  detailList[detailList.length - 1];
+
+const detailItems = useMemo(
+  () => [
+    {
+      icon: CalendarDays,
+      title: "Tanggal & Waktu",
+      value: firstDetail?.tanggal
+        ? new Date(`${firstDetail.tanggal}T00:00:00`)
+            .toLocaleDateString("id-ID", {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            })
+        : "-",
+
+      subvalue:
+        firstDetail?.jam_mulai &&
+        lastDetail?.jam_selesai
+          ? `${String(firstDetail.jam_mulai).slice(0, 5)}
+            - ${String(lastDetail.jam_selesai).slice(0, 5)}`
           : "",
-      },
-      {
-        icon: Building2,
-        title: "Lapangan",
-        value: selectedSlots?.[0]?.court_no
-          ? `Lapangan ${selectedSlots[0].court_no}`
-          : "Lapangan",
-        subvalue: "",
-      },
-      {
-        icon: Clock3,
-        title: "Durasi Bermain",
-        value: totalDurationMinutes
-          ? `${Math.ceil(totalDurationMinutes / 60)} Jam`
-          : "-",
-        subvalue: "",
-      },
-      {
-        icon: MapPin,
-        title: "Lokasi",
-        value: field?.alamat?.split(",")?.[0] || "Lokasi",
-        subvalue: field?.alamat?.split(",")?.slice(1).join(",") || "",
-      },
-    ],
-    [field, selectedSlots, totalDurationMinutes]
-  );
+    },
+
+    {
+      icon: Building2,
+      title: "Lapangan",
+      value: firstDetail?.nomor_lapangan
+        ? `Lapangan ${firstDetail.nomor_lapangan}`
+        : "Lapangan",
+      subvalue: "",
+    },
+
+    {
+      icon: Clock3,
+      title: "Durasi Bermain",
+      value: paymentData?.total_durasi_menit
+        ? `${Math.ceil(
+            paymentData.total_durasi_menit / 60
+          )} Jam`
+        : "-",
+      subvalue: "",
+    },
+
+    {
+      icon: MapPin,
+      title: "Lokasi",
+      value:
+        paymentData?.lapangan?.alamat
+          ?.split(",")?.[0] || "Lokasi",
+
+      subvalue:
+        paymentData?.lapangan?.alamat
+          ?.split(",")
+          ?.slice(1)
+          .join(",") || "",
+    },
+  ],
+  [paymentData, firstDetail]
+);
 
   const instructions = useMemo(() => {
     if (paymentKind === "bank") {
@@ -645,6 +761,46 @@ export default function Transfer() {
                   </div>
                 );
               })}
+              {/* ===== NEW CODE ===== */}
+              {selectedServiceDetails.length > 0 && (
+                <div className="border-t border-[#d7d7d7] pt-5">
+                  <div className="mb-3 text-[18px] font-semibold text-[#111]">
+                    Layanan Tambahan
+                  </div>
+
+                  <div className="space-y-2">
+                    {selectedServiceDetails.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex items-center justify-between text-[15px]"
+                      >
+                        <span>
+                          {item.layanan?.nama_layanan || "-"} x {item.qty}
+                        </span>
+
+                        <span className="font-medium">
+                          Rp {Number(
+                            item.subtotal || 0
+                          ).toLocaleString("id-ID")}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-3 border-t border-[#d7d7d7] pt-3 flex items-center justify-between">
+                    <span className="font-semibold">
+                      Total Layanan
+                    </span>
+
+                    <span className="font-bold text-[#2a7f30]">
+                      Rp{" "}
+                      {Number(
+                        paymentData?.subtotal_layanan || 0
+                      ).toLocaleString("id-ID")}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
             {/* ✅ NEW: tombol ke halaman pesanan */}
             <button

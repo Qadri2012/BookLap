@@ -98,11 +98,13 @@ const Pemesanan = sequelize.define(
       defaultValue: 0,
     },
 
+    // ===== NEW CODE TAHAP 7A =====
     status_pemesanan: {
-      type: DataTypes.STRING(30),
+      type: DataTypes.STRING(50),
       allowNull: false,
       defaultValue: "menunggu_pembayaran",
     },
+    // ===== END NEW CODE =====
 
     // ✅ NEW: status final untuk halaman riwayat
       riwayat_status: {

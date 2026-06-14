@@ -13,6 +13,7 @@ const SLIDE_IMGS = [img1, img2, img3, img4];
 // ✅ DISEMPURNAKAN: pakai base URL dari env agar tidak hardcode terus-menerus
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
+
 const authApi = axios.create({
   baseURL: `${API_BASE}/api/v1`,
   withCredentials: true,
@@ -503,6 +504,8 @@ export default function Login() {
     setLLoading(true);
 
     try {
+
+
       const { data } = await authApi.post("/auth/login", {
         email: sanitize(lEmail).trim().toLowerCase(),
         password: lPass,

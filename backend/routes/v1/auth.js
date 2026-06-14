@@ -17,4 +17,16 @@ router.post("/verify-otp", ctrl.verifyOtp);
 // ✅ NEW: CAPTCHA
 router.get("/captcha", ctrl.getCaptcha);
 
+// NEW: route khusus mitra
+router.post("/register-mitra", ctrl.registerMitra);
+router.post("/login-mitra", ctrl.loginMitra);
+
+// NEW: route khusus admin
+router.post("/register-admin", ctrl.registerAdmin);
+router.post("/check-admin-identity", ctrl.checkAdminIdentity);
+
+// NEW: verifikasi OTP email admin
+router.post("/verify-admin-otp", ctrl.verifyAdminOtp);
+router.post("/request-admin-login-otp", ctrl.requestAdminLoginOtp);
+router.post("/verify-admin-login-otp", ctrl.verifyAdminLoginOtp);
 module.exports = router;

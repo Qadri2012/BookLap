@@ -11,9 +11,7 @@ const refreshApi = axios.create({
   withCredentials: true,
 });
 
-// ─────────────────────────────────────────────────────────────
 // TOKEN HELPER
-// ─────────────────────────────────────────────────────────────
 export function getToken() {
   return localStorage.getItem("token");
 }
@@ -28,18 +26,13 @@ export function removeToken() {
   localStorage.removeItem("redirectAfterAuth");
 }
 
-
-
-// ─────────────────────────────────────────────────────────────
 // UNAUTHORIZED HANDLER
 // Dipakai dari AuthContext supaya logout sinkron
-// ─────────────────────────────────────────────────────────────
 let unauthorizedHandler = null;
 
 export function setUnauthorizedHandler(handler) {
   unauthorizedHandler = handler;
 }
-
 
 // REQUEST INTERCEPTOR
 api.interceptors.request.use(
@@ -55,10 +48,8 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// ─────────────────────────────────────────────────────────────
 // RESPONSE INTERCEPTOR
 // ✅ NEW: auto refresh token dari HttpOnly Cookie
-// ─────────────────────────────────────────────────────────────
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -101,19 +92,11 @@ api.interceptors.response.use(
       }
     }
 
-    if (status === 403) {
-      if (typeof unauthorizedHandler === "function") {
-        unauthorizedHandler(error);
-      }
-    }
-
     return Promise.reject(error);
   }
 );
 
-// ─────────────────────────────────────────────────────────────
 // PARSE JSON
-// ─────────────────────────────────────────────────────────────
 function parseJSON(val, fallback) {
   if (!val) return fallback;
   if (typeof val === "object") return val;
@@ -125,9 +108,7 @@ function parseJSON(val, fallback) {
   }
 }
 
-// ─────────────────────────────────────────────────────────────
 // PARSE LAPANGAN
-// ─────────────────────────────────────────────────────────────
 function parseLapangan(d) {
   return {
     ...d,
@@ -139,23 +120,18 @@ function parseLapangan(d) {
   };
 }
 
-// ─────────────────────────────────────────────────────────────
 // LAPANGAN
-// ─────────────────────────────────────────────────────────────
 export const getLapangan = async (params = {}) => {
   const query = new URLSearchParams(params).toString();
   const res = await api.get(`/lapangan${query ? `?${query}` : ""}`);
   return Array.isArray(res.data) ? res.data.map(parseLapangan) : [];
 };
-
 export const getLapanganById = async (id) => {
   const res = await api.get(`/lapangan/${id}`);
   return parseLapangan(res.data);
 };
 
-// ─────────────────────────────────────────────────────────────
 // REVIEW
-// ─────────────────────────────────────────────────────────────
 export const getReviews = async (lapanganId) => {
   const res = await api.get(`/review/${lapanganId}`);
   return Array.isArray(res.data) ? res.data : [];
@@ -166,53 +142,152 @@ export const createReview = async (payload) => {
   return res.data;
 };
 
-
 // Frontend mengirim data lewat Axios
 export const login = async (payload) => {
   const res = await api.post("/auth/login", payload);
   return res.data;
 };
-
-
 export const register = async (payload) => {
   const res = await api.post("/auth/register", payload);
   return res.data;
 };
-
 export const verifyAuth = async () => {
   const res = await api.get("/auth/verify");
   return res.data;
 };
-
 export const refreshAuth = async () => {
-  // ✅ NEW: refresh token dibaca dari HttpOnly cookie di backend
+  //refresh token dibaca dari HttpOnly cookie di backend
   const res = await refreshApi.post("/auth/refresh");
   return res.data;
 };
 
+ //backend menghapus / mem-blacklist refresh token dari cookie
 export const logoutAuth = async () => {
-  // ✅ NEW: backend menghapus / mem-blacklist refresh token dari cookie
   const res = await refreshApi.post("/auth/logout");
   removeToken();
   return res.data;
 };
 
-// ─────────────────────────────────────────────────────────────
-// BOOKING
-// ─────────────────────────────────────────────────────────────
+// Mengambil data booking user
 export const getMyBookings = async () => {
   const res = await api.get("/booking");
   return res.data;
 };
-
+// Membuat booking baru
 export const createBooking = async (payload) => {
   const res = await api.post("/booking", payload);
   return res.data;
 };
-
+// Membatalkan booking
 export const cancelBooking = async (id) => {
   const res = await api.patch(`/booking/${id}/cancel`);
   return res.data;
 };
 
+export const getAdminUsers = async () => {
+  const res = await api.get("/admin/users");
+  return res.data;
+};
+
+export const getPendingAdmins = async () => {
+  const res = await api.get("/admin/users/pending");
+  return res.data;
+};
+
+export const approveAdmin = async (id) => {
+  const res = await api.patch(`/admin/users/${id}/approve`);
+  return res.data;
+};
+
+export const rejectAdmin = async (id) => {
+  const res = await api.patch(`/admin/users/${id}/reject`);
+  return res.data;
+};
+
+// ADMIN DASHBOARD
+export const getAdminDashboard = async () => {
+  const res = await api.get("/admin/dashboard");
+  return res.data;
+};
+// ADMIN LAPANGAN
+
+export const getAdminLapangan = async () => {
+  const res = await api.get("/lapangan");
+  return res.data;
+};
+
+export const deleteLapangan = async (id) => {
+  const res = await api.delete(`/lapangan/${id}`);
+  return res.data;
+};
+// ADMIN JADWAL
+
+export const getJadwal = async (params) => {
+  const res = await api.get("/jadwal", {
+    params,
+  });
+
+  return res.data;
+};
+
+export const createJadwal = async (payload) => {
+  const res = await api.post("/jadwal", payload);
+  return res.data;
+};
+
+// ======================================
+// ADMIN FORM LAPANGAN
+// ======================================
+
+export const createLapangan = async (payload) => {
+  const res = await api.post("/lapangan", payload);
+  return res.data;
+};
+
+export const updateLapangan = async (id, payload) => {
+  const res = await api.put(`/lapangan/${id}`, payload);
+  return res.data;
+};
+
+export const getAdminProfile = async () => {
+  const res = await axios.get(
+    "/api/v1/admin/profile",
+    {
+      withCredentials: true,
+    }
+  );
+  return res.data;
+};
+// ======================================
+// ADMIN BOOKING
+// ======================================
+
+export const getAllPemesanan = async () => {
+  const res = await api.get("/pemesanan");
+  return res.data;
+};
+
+export const updateStatusPemesanan = async (
+  id,
+  status_pemesanan
+) => {
+  const res = await api.patch(
+    `/pemesanan/${id}/status`,
+    {
+      status_pemesanan,
+    }
+  );
+
+  return res.data;
+};
+
+export const setujuiPembatalan = async (
+  id
+) => {
+  const res = await api.patch(
+    `/pemesanan/${id}/pembatalan`
+  );
+
+  return res.data;
+};
 export default api;

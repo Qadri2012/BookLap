@@ -1,9 +1,7 @@
-// middleware/roleMiddleware.js
-
+// NEW: middleware/roleMiddleware.js
 module.exports = (...allowedRoles) => {
   return (req, res, next) => {
     try {
-      // user berasal dari authMiddleware JWT
       const user = req.user;
 
       if (!user) {
@@ -13,7 +11,6 @@ module.exports = (...allowedRoles) => {
         });
       }
 
-      // cek role
       if (!allowedRoles.includes(user.role)) {
         return res.status(403).json({
           message: "Akses ditolak",
@@ -22,7 +19,6 @@ module.exports = (...allowedRoles) => {
       }
 
       next();
-
     } catch (err) {
       return res.status(500).json({
         message: "Role middleware error",
