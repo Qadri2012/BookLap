@@ -56,7 +56,7 @@ export default function AdminBooking() {
       try {
         await updateStatusPemesanan(
           id,
-          "booking"
+           "sedang_dimainkan"
         );
 
         await loadData();
@@ -70,19 +70,46 @@ export default function AdminBooking() {
     };
 
   const handleSetujuiPembatalan =
-    async (id) => {
-      try {
+  async (id) => {
+    try {
+
+      console.log(
+        "SETUJUI PEMBATALAN ID =",
+        id
+      );
+
+      const result =
         await setujuiPembatalan(id);
 
-        await loadData();
+      console.log(
+        "RESPONSE =",
+        result
+      );
 
-        alert(
-          "Pembatalan berhasil disetujui"
-        );
-      } catch (err) {
-        console.error(err);
-      }
-    };
+      await loadData();
+
+      alert(
+        "Pembatalan berhasil disetujui"
+      );
+
+    } catch (err) {
+
+      console.error(
+        "ERROR SETUJUI PEMBATALAN =",
+        err
+      );
+
+      console.log(
+        err?.response?.data
+      );
+
+      alert(
+        JSON.stringify(
+          err?.response?.data
+        )
+      );
+    }
+  };
 
   const renderStatus = (status) => {
     switch (status) {
@@ -100,7 +127,7 @@ export default function AdminBooking() {
           </span>
         );
 
-      case "booking":
+      case "sedang_dimainkan":
         return (
           <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
             Sedang Bermain

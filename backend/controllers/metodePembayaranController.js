@@ -69,6 +69,7 @@ const createMetodePembayaran = async (req, res) => {
       });
     }
 
+    
     const existing = await MetodePembayaran.findOne({ where: { kode } });
     if (existing) {
       return res.status(400).json({

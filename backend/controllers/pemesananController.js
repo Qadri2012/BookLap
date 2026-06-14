@@ -657,7 +657,10 @@ const updateStatusPemesanan = async (req, res) => {
       dibatalkan_at,
     });
     // ===== NEW CODE TAHAP 8A =====
-    if (status_pemesanan === "booking") {
+    if (
+      status_pemesanan ===
+      "sedang_dimainkan"
+    ) {
 
       const detailSlots =
         await DetailPemesanan.findAll({
@@ -697,11 +700,23 @@ const updateStatusPemesanan = async (req, res) => {
       data,
     });
   } catch (error) {
-    console.error("UPDATE status pemesanan error:", error);
-    return res.status(500).json({
-      message: "Gagal memperbarui status pemesanan",
-    });
-  }
+
+  console.error(
+    "UPDATE STATUS ERROR:",
+    error
+  );
+
+  console.error(
+    "ERROR MESSAGE =",
+    error.message
+  );
+
+  return res.status(500).json({
+    message:
+      "Gagal memperbarui status pemesanan",
+    error: error.message,
+  });
+}
 };
 const selesaiPemesanan = async (req, res) => {
   try {
@@ -767,17 +782,26 @@ const selesaiPemesanan = async (req, res) => {
     });
   }
 };
-const setujuiPembatalan = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { alasan_batal = null } = req.body;
+const setujuiPembatalan = async (
+    req,
+    res
+  ) => {
+    try {
+      const { id } = req.params;
 
-    const data = await Pemesanan.findByPk(id);
-    if (!data) {
-      return res.status(404).json({
-        message: "Pemesanan tidak ditemukan",
-      });
-    }
+      const {
+        alasan_batal = null,
+      } = req.body || {};
+
+      const data =
+        await Pemesanan.findByPk(id);
+
+      if (!data) {
+        return res.status(404).json({
+          message:
+            "Pemesanan tidak ditemukan",
+        });
+      }
 
     await data.update({
       status_pemesanan: "dibatalkan",
