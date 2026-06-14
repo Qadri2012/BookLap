@@ -155,10 +155,13 @@ if (!kode || !nama_metode) {
 Kemudian diubah menjadi:
 
 ```javascript
-if (!kode && !nama_metode) {
+if (!kode ) {
 ```
 
 Perubahan tersebut menyebabkan test case validasi gagal karena sistem tetap menerima data yang seharusnya ditolak.
+
+![Hasil Regression FAIL](docs/hasil1.png)
+![Hasil Regression PASS](docs/hasil2.png)
 
 Hasil pengujian menunjukkan bahwa **regression test berhasil mendeteksi perubahan yang menyebabkan bug**.
 
@@ -224,3 +227,6 @@ Pengujian berhasil:
 - Terintegrasi dengan **GitHub Actions** untuk pengujian otomatis.
 
 Dengan demikian seluruh kebutuhan tugas Implementasi Regression Test Suite telah berhasil dipenuhi.
+
+NAMA : MUHAMMAD IQBAL (231011085)
+       DELVINA DWI AMANDA (231011104)
