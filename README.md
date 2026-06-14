@@ -1,12 +1,12 @@
-https://github.com/Qadri2012/BookLap/blob/5736c733d53e88c103c4f8118e2babdd6b689ebe/.github/workflows/test.yml 
+[![Node.js CI](https://github.com/Qadri2012/BookLap/actions/workflows/test.yml/badge.svg)](https://github.com/Qadri2012/BookLap/actions/workflows/test.yml)
 
-# BookLap - Regression Test Suite
+# BookLap — Regression Test Suite
 
 ## Deskripsi Project
 
 BookLap merupakan aplikasi pemesanan lapangan olahraga berbasis web yang dikembangkan menggunakan React.js, Vite, Express.js, Sequelize, dan MySQL.
 
-Pada tugas ini dilakukan implementasi Regression Test Suite menggunakan Jest dan Supertest untuk memastikan perubahan kode tidak menyebabkan kerusakan pada fungsionalitas yang sudah berjalan sebelumnya.
+Pada tugas ini dilakukan implementasi **Regression Test Suite** menggunakan Jest dan Supertest untuk memastikan perubahan kode tidak menyebabkan kerusakan pada fungsionalitas yang sudah berjalan sebelumnya.
 
 ---
 
@@ -14,16 +14,14 @@ Pada tugas ini dilakukan implementasi Regression Test Suite menggunakan Jest dan
 
 Tujuan regression testing adalah:
 
-* Memastikan endpoint tetap berfungsi setelah terjadi perubahan kode.
-* Mendeteksi bug atau regresi yang muncul akibat modifikasi program.
-* Menjamin kualitas dan stabilitas API.
-* Mengotomatisasi proses pengujian menggunakan GitHub Actions.
+- Memastikan endpoint tetap berfungsi setelah terjadi perubahan kode.
+- Mendeteksi bug atau regresi yang muncul akibat modifikasi program.
+- Menjamin kualitas dan stabilitas API.
+- Mengotomatisasi proses pengujian menggunakan GitHub Actions.
 
 ---
 
 ## Endpoint yang Diuji
-
-Endpoint yang digunakan dalam pengujian adalah:
 
 ```text
 /api/v1/metode-pembayaran
@@ -39,23 +37,11 @@ backend/controllers/metodePembayaranController.js
 
 ## Teknologi yang Digunakan
 
-### Backend
-
-* Node.js
-* Express.js
-* Sequelize
-* MySQL
-
-### Frontend
-
-* React.js
-* Vite
-
-### Testing
-
-* Jest
-* Supertest
-* GitHub Actions
+| Kategori | Teknologi |
+|----------|-----------|
+| Backend  | Node.js, Express.js, Sequelize, MySQL |
+| Frontend | React.js, Vite |
+| Testing  | Jest, Supertest, GitHub Actions |
 
 ---
 
@@ -105,52 +91,60 @@ npx jest --coverage
 
 ### GET Metode Pembayaran By ID
 
-* TC-01 Data ditemukan
-* TC-02 Data tidak ditemukan (404)
-* TC-03 Error database (500)
+| Kode | Deskripsi |
+|------|-----------|
+| TC-01 | Data ditemukan |
+| TC-02 | Data tidak ditemukan (404) |
+| TC-03 | Error database (500) |
 
 ### GET All Metode Pembayaran
 
-* TC-04 Berhasil mengambil seluruh data aktif
-* TC-05 Error database (500)
+| Kode | Deskripsi |
+|------|-----------|
+| TC-04 | Berhasil mengambil seluruh data aktif |
+| TC-05 | Error database (500) |
 
 ### CREATE Metode Pembayaran
 
-* TC-06 Berhasil membuat data
-* TC-07 Kode kosong
-* TC-08 Nama metode kosong
-* TC-09 Kode sudah digunakan
-* TC-10 Error database (500)
+| Kode | Deskripsi |
+|------|-----------|
+| TC-06 | Berhasil membuat data |
+| TC-07 | Kode kosong |
+| TC-08 | Nama metode kosong |
+| TC-09 | Kode sudah digunakan |
+| TC-10 | Error database (500) |
 
 ### GET All Metode Pembayaran Admin
 
-* TC-11 Berhasil mengambil seluruh data admin
-* TC-12 Error database (500)
+| Kode | Deskripsi |
+|------|-----------|
+| TC-11 | Berhasil mengambil seluruh data admin |
+| TC-12 | Error database (500) |
 
 ### UPDATE Metode Pembayaran
 
-* TC-13 Berhasil memperbarui data
-* TC-14 Data tidak ditemukan
-* TC-15 Kode sudah digunakan
-* TC-16 Error database (500)
+| Kode | Deskripsi |
+|------|-----------|
+| TC-13 | Berhasil memperbarui data |
+| TC-14 | Data tidak ditemukan |
+| TC-15 | Kode sudah digunakan |
+| TC-16 | Error database (500) |
 
 ### DELETE Metode Pembayaran
 
-* TC-17 Berhasil menghapus data
-* TC-18 Data tidak ditemukan
-* TC-19 Error database (500)
+| Kode | Deskripsi |
+|------|-----------|
+| TC-17 | Berhasil menghapus data |
+| TC-18 | Data tidak ditemukan |
+| TC-19 | Error database (500) |
 
-Total test case yang berhasil dijalankan:
-
-```text
-19 Test Case
-```
+> **Total test case yang berhasil dijalankan: 19 Test Case**
 
 ---
 
 ## Implementasi Regression Testing
 
-Regression testing dilakukan dengan mensimulasikan perubahan kode pada validasi endpoint Create Metode Pembayaran.
+Regression testing dilakukan dengan mensimulasikan perubahan kode pada validasi endpoint **Create Metode Pembayaran**.
 
 Validasi awal:
 
@@ -166,7 +160,7 @@ if (!kode && !nama_metode) {
 
 Perubahan tersebut menyebabkan test case validasi gagal karena sistem tetap menerima data yang seharusnya ditolak.
 
-Hasil pengujian menunjukkan bahwa regression test berhasil mendeteksi perubahan yang menyebabkan bug.
+Hasil pengujian menunjukkan bahwa **regression test berhasil mendeteksi perubahan yang menyebabkan bug**.
 
 Setelah kode dikembalikan ke kondisi semula, seluruh test kembali berhasil dijalankan.
 
@@ -174,28 +168,28 @@ Setelah kode dikembalikan ke kondisi semula, seluruh test kembali berhasil dijal
 
 ## Hasil Code Coverage
 
-Hasil pengujian coverage:
+| Metric | Hasil |
+|--------|-------|
+| Statements | 100% |
+| Functions  | 100% |
+| Lines      | 100% |
+| Branches   | 90%  |
 
-| Metric     | Hasil |
-| ---------- | ----- |
-| Statements | 100%  |
-| Functions  | 100%  |
-| Lines      | 100%  |
-| Branches   | 90%   |
+> Hasil tersebut telah melampaui target minimal **75% code coverage** yang ditentukan pada tugas.
 
-Hasil tersebut telah melampaui target minimal 75% code coverage yang ditentukan pada tugas.
+### Screenshot Coverage
 
-Tambahkan screenshot coverage pada folder:
+![Coverage](docs/coverage.png.png)
 
-```text
-docs/coverage.png
-```
+### Detail Coverage
+
+![Coverage Detail](docs/coverage1.png.png)
 
 ---
 
 ## Continuous Integration (GitHub Actions)
 
-Project telah menggunakan GitHub Actions untuk menjalankan regression test secara otomatis setiap kali terjadi push ke repository.
+Project telah menggunakan **GitHub Actions** untuk menjalankan regression test secara otomatis setiap kali terjadi push ke repository.
 
 Lokasi workflow:
 
@@ -210,25 +204,23 @@ Proses yang dijalankan:
 3. Menjalankan Jest Test Suite
 4. Menampilkan status berhasil atau gagal
 
-Workflow berhasil dijalankan dengan status Success.
+### Hasil GitHub Actions
 
-Tambahkan screenshot GitHub Actions pada folder:
+Workflow berhasil dijalankan dengan status **Success**.
 
-```text
-docs/github-actions.png
-```
+![GitHub Actions](docs/github-actions.png.png)
 
 ---
 
 ## Kesimpulan
 
-Regression Test Suite berhasil diimplementasikan pada endpoint Metode Pembayaran menggunakan Jest dan Supertest.
+Regression Test Suite berhasil diimplementasikan pada endpoint **Metode Pembayaran** menggunakan Jest dan Supertest.
 
 Pengujian berhasil:
 
-* Menjalankan 19 test case.
-* Mendeteksi regresi ketika terjadi perubahan validasi.
-* Mencapai 100% line coverage.
-* Terintegrasi dengan GitHub Actions untuk pengujian otomatis.
+- Menjalankan **19 test case**.
+- Mendeteksi regresi ketika terjadi perubahan validasi.
+- Mencapai **100% line coverage**.
+- Terintegrasi dengan **GitHub Actions** untuk pengujian otomatis.
 
 Dengan demikian seluruh kebutuhan tugas Implementasi Regression Test Suite telah berhasil dipenuhi.
