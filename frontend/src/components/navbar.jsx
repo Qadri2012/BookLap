@@ -22,7 +22,7 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const isLoginPage = location.pathname.startsWith("/login");
   const isLoggedIn = !!localStorage.getItem("token");
-  const user = JSON.parse(localStorage.getItem("user") || "null");
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
   const displayName = user?.nama || "Akun Saya";
   // ✅ NEW: sembunyikan navbar di halaman cash
 const isCashPage = location.pathname.startsWith("/cash");
@@ -156,11 +156,17 @@ if (isCashPage) return null;
           color: "#fff",
         }}
       >
-        {(user.nama || user.username || "U")[0].toUpperCase()}
+        {(user?.nama || user?.username || "U")[0].toUpperCase()}
       </div>
 
-      <span style={{ fontSize: "13px", fontWeight: 600, color: "#fff" }}>
-        {user.nama || user.username || "Pengguna"}
+      <span
+        style={{
+          fontSize: "13px",
+          fontWeight: 600,
+          color: "#fff",
+        }}
+      >
+        {user?.nama || user?.username || "Pengguna"}
       </span>
 
       <svg

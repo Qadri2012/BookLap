@@ -1,4 +1,3 @@
-// models/review.js
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
 
@@ -13,12 +12,19 @@ const Review = sequelize.define(
 
     userId: {
       type: DataTypes.UUID,
-      allowNull: true,
+      allowNull: false,
     },
 
     lapanganId: {
       type: DataTypes.INTEGER,
-      allowNull: true,
+      allowNull: false,
+    },
+
+    // NEW
+    pemesananId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      unique: true,
     },
 
     rating: {
@@ -28,6 +34,16 @@ const Review = sequelize.define(
         min: 1,
         max: 5,
       },
+    },
+    nama_user: DataTypes.STRING,
+    total_membantu: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+    },
+
+    total_tidak_membantu: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
     },
 
     komentar: {

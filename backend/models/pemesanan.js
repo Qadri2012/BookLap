@@ -120,8 +120,13 @@ const Pemesanan = sequelize.define(
       type: DataTypes.DATE,
       allowNull: true,
     },
+    
 
     dibatalkan_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    tampilkan_sampai: {
       type: DataTypes.DATE,
       allowNull: true,
     },

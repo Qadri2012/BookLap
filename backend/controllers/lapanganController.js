@@ -53,6 +53,7 @@ exports.getById = async (req, res) => {
     const { id } = req.params;
 
     const data = await Lapangan.findByPk(id);
+
     if (!data) {
       return res.status(404).json({
         message: "Lapangan tidak ditemukan",
@@ -60,23 +61,60 @@ exports.getById = async (req, res) => {
     }
 
     const courtRows = await Jadwal.findAll({
-      where: { lapangan_id: id },
+      where: {
+        lapangan_id: id,
+      },
       attributes: ["court_no"],
       group: ["court_no"],
       order: [["court_no", "ASC"]],
     });
 
     const courts = courtRows.length
-      ? courtRows.map((row) => `Lapangan ${row.court_no}`)
+      ? courtRows.map(
+          (row) => `Lapangan ${row.court_no}`
+        )
       : ["Lapangan 1"];
+
+    // ==========================
+    // HITUNG REVIEW
+    // ==========================
+
+    const reviews = await Review.findAll({
+      where: {
+        lapanganId: id,
+      },
+    });
+
+    const total_review =
+      reviews.length;
+
+    const rating_rata_rata =
+      total_review === 0
+        ? 0
+        : Number(
+            (
+              reviews.reduce(
+                (sum, item) =>
+                  sum +
+                  Number(item.rating || 0),
+                0
+              ) / total_review
+            ).toFixed(1)
+          );
 
     return res.json({
       ...data.toJSON(),
+
       courts,
+
+      rating_rata_rata,
+
+      total_review,
     });
   } catch (err) {
     return res.status(500).json({
-      message: "Gagal mengambil detail lapangan",
+      message:
+        "Gagal mengambil detail lapangan",
       error: err.message,
     });
   }

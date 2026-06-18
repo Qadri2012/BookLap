@@ -266,6 +266,25 @@ export const getAllPemesanan = async () => {
   const res = await api.get("/pemesanan");
   return res.data;
 };
+// ===== NEW CODE RIWAYAT USER =====
+
+export const getPemesananSaya =
+  async () => {
+
+  const user = JSON.parse(
+    localStorage.getItem(
+      "user"
+    )
+  );
+
+  const res = await api.get(
+    `/pemesanan/user/${user.id}`
+  );
+
+  return res.data;
+};
+
+// ===== END NEW CODE =====
 
 export const updateStatusPemesanan = async (
   id,
@@ -290,4 +309,16 @@ export const setujuiPembatalan = async (
 
   return res.data;
 };
+
+// ===== NEW CODE RIWAYAT =====
+export const getRiwayatByUser = async (
+  userId
+) => {
+  const res = await api.get(
+    `/pemesanan/riwayat/user/${userId}`
+  );
+
+  return res.data;
+};
+// ===== END NEW CODE =====
 export default api;

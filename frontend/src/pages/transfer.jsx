@@ -90,8 +90,8 @@ const [copied, setCopied] = useState(false);
       : [];
   }, [paymentData]);
 
-useEffect(() => {
- const fetchPemesanan = async () => {
+// ===== NEW CODE FETCH PEMESANAN =====
+const fetchPemesanan = async () => {
   try {
     if (!pemesananId) return;
 
@@ -105,20 +105,26 @@ useEffect(() => {
 
     setPaymentData(data);
 
+    // Jika admin sudah konfirmasi pembayaran
     if (
-      data?.payment_expires_at
+      data.status_pemesanan !==
+      "menunggu_pembayaran"
+    ) {
+      setTimeLeft(0);
+      return;
+    }
+
+    if (
+      data.payment_expires_at
     ) {
       const deadline =
         new Date(
           data.payment_expires_at
         ).getTime();
 
-      const now =
-        Date.now();
-
       setTimeLeft(
         Math.max(
-          deadline - now,
+          deadline - Date.now(),
           0
         )
       );
@@ -127,11 +133,35 @@ useEffect(() => {
     console.error(err);
   }
 };
+// ===== END NEW CODE =====
 
+// ===== NEW CODE LOAD AWAL =====
+useEffect(() => {
   fetchPemesanan();
+}, [pemesananId]);
+// ===== END NEW CODE =====
+// ===== CEK STATUS PEMBAYARAN DARI ADMIN =====
+useEffect(() => {
+  if (!pemesananId) return;
+
+  const interval =
+    setInterval(() => {
+      fetchPemesanan();
+    }, 5000);
+
+  return () =>
+    clearInterval(interval);
 }, [pemesananId]);
 
 useEffect(() => {
+  if (
+    paymentData?.status_pemesanan !==
+    "menunggu_pembayaran"
+  ) {
+    setTimeLeft(0);
+    return;
+  }
+
   if (!paymentData?.payment_expires_at)
     return;
 
@@ -571,13 +601,30 @@ const detailItems = useMemo(
 
               <div className="min-w-0">
                 <h1 className="text-[28px] font-semibold leading-none text-[#21883a]">
-                  Pesanan Menunggu Pembayaran
+                  {paymentData?.status_pemesanan === "expired"
+                    ? "Pembayaran Expired"
+                    : paymentData?.status_pemesanan === "dibatalkan"
+                    ? "Pesanan Dibatalkan"
+                    : [
+                        "sudah_bayar",
+                        "sedang_dimainkan",
+                        "selesai",
+                      ].includes(paymentData?.status_pemesanan)
+                    ? "Pembayaran Berhasil"
+                    : "Pesanan Menunggu Pembayaran"}
                 </h1>
 
                 <p className="mt-4 max-w-full text-[14px] leading-none text-[#111]">
                   Terima Kasih! Pesanan Anda Telah Berhasil Dibuat.
                   <span className="mx-3 text-[#111]">|</span>
-                  Silahkan Lakukan Pembayaran Sebelum Batas Waktu Berakhir
+
+                  {[
+                    "sudah_bayar",
+                    "sedang_dimainkan",
+                    "selesai",
+                  ].includes(paymentData?.status_pemesanan)
+                    ? "Pembayaran berhasil dikonfirmasi oleh admin."
+                    : "Silahkan lakukan pembayaran sebelum batas waktu berakhir."}
                 </p>
               </div>
             </div>

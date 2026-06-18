@@ -1,3 +1,4 @@
+// models/User.js
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
 
@@ -145,6 +146,27 @@ const User = sequelize.define(
     last_login: {
       type: DataTypes.DATE,
       allowNull: true,
+    },
+    jumlah_no_show: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    },
+
+    akun_diblokir: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+
+    blocked_until: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    peringatan_no_show: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      defaultValue: null,
     },
 
     ktp_pemilik: {

@@ -80,6 +80,7 @@ export default function Cash() {
     totalDurationMinutes = DEFAULT_DURATION_MINUTES,
     kodePemesanan        = DEFAULT_ORDER_CODE,
     pemesananId,
+    statusPemesanan,
     selectedServiceDetails = [],
   } = location.state || {};
 
@@ -102,7 +103,7 @@ export default function Cash() {
 
   // ─── state ───────────────────────────────────────────────────────────────────
   const [copied,      setCopied]      = useState(false);
-  const [timeLeft,    setTimeLeft]    = useState(0);
+  const [timeLeft,    setTimeLeft]    = useState(null);
   const [timerReady,  setTimerReady]  = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(isDirectFromPesanan);
   const [agreement, setAgreement] = useState(
@@ -173,8 +174,11 @@ export default function Cash() {
     const now = Date.now();
 
     // BELUM MASUK WAKTU TIMER
-    if (now < timerStart.getTime()) {
-      return 60 * 60 * 1000;
+    if (
+      now <
+      timerStart.getTime()
+    ) {
+      return null;
     }
 
     // SUDAH LEWAT WAKTU BERMAIN
@@ -201,13 +205,6 @@ export default function Cash() {
 
       if (remaining === 0) {
         clearInterval(interval);
-        // Auto-batalkan pesanan cash yang melewati deadline
-        if (pemesananId) {
-          api.patch(`/pemesanan/${pemesananId}/status`, {
-            status_pemesanan: "dibatalkan",
-            alasan_batal: "Melewati batas pembayaran cash",
-          }).catch((err) => console.error("Gagal batalkan pesanan:", err));
-        }
       }
     }, 1000);
 
@@ -220,7 +217,7 @@ export default function Cash() {
   const seconds = pad2(Math.floor((timeLeft % 60_000) / 1_000));
 
   // isExpired hanya true jika timer sudah siap DAN habis (bukan saat inisialisasi 0)
-  const isExpired = timerReady && timeLeft === 0;
+  const isExpired = false;
   
   const playTime = slot?.tanggal &&
                  slot?.jam_mulai
@@ -348,19 +345,30 @@ const timerNotStarted =
                 <Clock3 className={`h-7 w-7 shrink-0 ${isExpired ? "text-red-500" : "text-[#d97706]"}`} />
                 <div className="flex flex-col">
                   <div className={`text-[15px] font-medium ${isExpired ? "text-red-500" : "text-[#d97706]"}`}>
-                    {isExpired ? "Waktu Habis" : "Menunggu Pembayaran"}
+                    {
+                      statusPemesanan ===
+                      "sudah_bayar"
+                        ? "Sudah Dibayar"
+                        : statusPemesanan ===
+                          "expired"
+                          ? "Expired"
+                          : "Menunggu Kedatangan"
+                    }
                   </div>
-                  {isConfirmed &&
-                  timerReady &&
+                  {
+                  isConfirmed &&
                   timerNotStarted && (
                     <div className="mt-1 text-[13px] text-[#666]">
                       Timer aktif 1 jam sebelum bermain
                     </div>
                   )}
 
-                  {isConfirmed &&
-                  timerReady &&
-                  !timerNotStarted && (
+                  {
+                  isConfirmed &&
+                  timeLeft !== null &&
+                  !timerNotStarted &&
+                  statusPemesanan ===
+                    "menunggu_kedatangan" && (
                     <div className="mt-1 text-[20px] font-extrabold tracking-widest text-[#d97706]">
                       {hours}:{minutes}:{seconds}
                     </div>

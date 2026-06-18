@@ -97,8 +97,21 @@ function toUserPayload(user) {
     level_akses: user.level_akses || null,
     jabatan_divisi: user.jabatan_divisi || null,
     nomor_identitas: user.nomor_identitas || null,
+
+    // FLOW CASH
+    jumlah_no_show:
+      user.jumlah_no_show || 0,
+
+    akun_diblokir:
+      user.akun_diblokir || false,
+
+    blocked_until:
+      user.blocked_until || null,
+
+    peringatan_no_show:
+      user.peringatan_no_show || null,
   };
-};
+}
 
 function getAccountStatusError(user) {
   const status = String(user?.status || "active").toLowerCase();

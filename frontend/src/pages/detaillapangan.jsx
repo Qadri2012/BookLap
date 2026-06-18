@@ -667,12 +667,37 @@ function CekJadwal({ field, slotGridRef, initialSelectedSlots = [], initialOpenB
           }}
         >
           {jadwalData.map((slot, i) => {
-            const isAvailable = slot.status === "tersedia";
+            // ======================================================
+            // NEW CODE - BLOKIR SLOT YANG SUDAH LEWAT UNTUK HARI INI
+            // ======================================================
+
+            const today = new Date();
+
+            const currentDate = today.toISOString().split("T")[0];
+
+            const currentMinutes =
+              today.getHours() * 60 +
+              today.getMinutes();
+
+            const slotEndMinutes = (() => {
+              const [h, m] = slot.jam_selesai
+                .slice(0, 5)
+                .split(":")
+                .map(Number);
+
+              return h * 60 + m;
+            })();
+
+            const isPastSlot =
+              slot.tanggal === currentDate &&
+              slotEndMinutes <= currentMinutes;
+            const isAvailable = slot.status === "tersedia" && !isPastSlot;
             const isPending = slot.status === "pending";
             const isBooking = slot.status === "booking";
             const isCancelled = slot.status === "dibatalkan";
             const isFinished = slot.status === "selesai";
             const isHoliday = slot.status === "libur";
+            
             const key = `${slot.tanggal}-${slot.jam_mulai}-${slot.jam_selesai}-${slot.court_no}`;
             const isSelected = selectedSlots.includes(key);
 
@@ -759,7 +784,9 @@ function CekJadwal({ field, slotGridRef, initialSelectedSlots = [], initialOpenB
                     marginTop: 6,
                     fontSize: 11,
                     fontWeight: 700,
-                    color: isAvailable
+                    color: isPastSlot
+                      ? "#6b7280"
+                      : isAvailable
                       ? "#186d22"
                       : isPending
                       ? "#d97706"
@@ -775,7 +802,9 @@ function CekJadwal({ field, slotGridRef, initialSelectedSlots = [], initialOpenB
                   }}
                 >
                   {
-                    slot.status === "tersedia"
+                    isPastSlot
+                      ? "WAKTU LEWAT"
+                      : slot.status === "tersedia"
                       ? "TERSEDIA"
                       : slot.status === "pending"
                       ? "PENDING"
@@ -1105,6 +1134,21 @@ function CekJadwal({ field, slotGridRef, initialSelectedSlots = [], initialOpenB
   );
 }
 
+function ReviewStars({
+  rating = 0,
+}) {
+  return (
+    <div
+      style={{
+        color: "#f59e0b",
+        fontSize: 16,
+      }}
+    >
+      {"★".repeat(rating)}
+      {"☆".repeat(5 - rating)}
+    </div>
+  );
+}
 // ── MAIN ──────────────────────────────────────────────────────────────────
 export default function DetailLapangan() {
 const { id } = useParams();
@@ -1113,7 +1157,43 @@ const routerLocation = useLocation();
 const location = window.location;
 
 const [field, setField] = useState(null);
+const [showAllReviews, setShowAllReviews] =
+  useState(false);
 const [reviews, setReviews] = useState([]);
+const voteReview = async (
+  reviewId,
+  tipe
+) => {
+  try {
+    const token =
+      localStorage.getItem(
+        "token"
+      );
+
+    await api.post(
+      `/review/${reviewId}/vote`,
+      {
+        tipe,
+      },
+      {
+        headers: {
+          Authorization:
+            `Bearer ${token}`,
+        },
+      }
+    );
+
+    const res =
+      await api.get(
+        `/review/${id}`
+      );
+
+    setReviews(res.data);
+
+  } catch (err) {
+    console.error(err);
+  }
+};
 
 const slotGridRef = useRef(null);
 const [selectedDayName, setSelectedDayName] = useState("Senin");
@@ -1212,6 +1292,11 @@ const parsed = {
   if (!field) {
   return <p>Loading...</p>;
 }
+const averageRating =
+  Number(field.rating_rata_rata || 0);
+
+const totalReview =
+  Number(field.total_review || reviews.length || 0);
   
 
   const desc = field.deskripsi || "Tidak ada deskripsi";
@@ -1345,26 +1430,402 @@ const parsed = {
 
   </div>
 
-  {/* 🔥 BUTTON GOOGLE MAPS */}
-  <a
-    href={`https://www.google.com/maps/dir/?api=1&destination=${field.latitude},${field.longitude}`}
-    target="_blank"
-    rel="noopener noreferrer"
-    style={{
-      display:"inline-block",
-      marginTop:10,
-      background: "#186d22",
-      color:"#fff",
-      padding:"10px 16px",
-      borderRadius:10,
-      fontSize:13,
-      fontWeight:700,
-      textDecoration:"none"
-    }}
+{/* =========================================
+    NAVIGASI KE LOKASI
+========================================= */}
+
+<button
+  onClick={() => {
+    const dest = `${field.latitude},${field.longitude}`;
+    const mapsBase = "https://www.google.com/maps/dir/?api=1";
+
+    if (!navigator.geolocation) {
+      window.open(
+        `${mapsBase}&destination=${dest}&travelmode=driving`,
+        "_blank"
+      );
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+
+        const origin = `${latitude},${longitude}`;
+
+        const url =
+          `${mapsBase}` +
+          `&origin=${origin}` +
+          `&destination=${dest}` +
+          `&travelmode=driving`;
+
+        window.open(url, "_blank");
+      },
+
+      () => {
+        window.open(
+          `${mapsBase}&destination=${dest}&travelmode=driving`,
+          "_blank"
+        );
+      },
+
+      {
+        enableHighAccuracy: true,
+        timeout: 6000,
+        maximumAge: 0,
+      }
+    );
+  }}
+  style={{
+    marginTop: 10,
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 8,
+    background: "#186d22",
+    color: "#fff",
+    border: "none",
+    padding: "11px 18px",
+    borderRadius: 10,
+    fontSize: 13,
+    fontWeight: 700,
+    cursor: "pointer",
+    fontFamily: "'Plus Jakarta Sans', sans-serif",
+    transition: "all .18s",
+  }}
+  onMouseEnter={(e) => {
+    e.currentTarget.style.background = "#145a1b";
+    e.currentTarget.style.transform = "translateY(-1px)";
+  }}
+  onMouseLeave={(e) => {
+    e.currentTarget.style.background = "#186d22";
+    e.currentTarget.style.transform = "translateY(0)";
+  }}
+>
+  <svg
+    width="15"
+    height="15"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
   >
-    Navigasi ke Lokasi
-  </a>
+    <polygon points="3 11 22 2 13 21 11 13 3 11" />
+  </svg>
+
+  Navigasi ke Lokasi
+</button>
 </div>
+
+{/* ===================================== */}
+{/* RATING & ULASAN — Drop-in replacement */}
+{/* ===================================== */}
+
+<div style={{ marginBottom: 40 }}>
+
+  {/* ── HEADER ROW ── */}
+  <div style={{
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+  }}>
+    <h2 style={{
+      fontSize: 16,
+      fontWeight: 800,
+      color: "#111827",
+      fontFamily: "'Poppins', sans-serif",
+      margin: 0,
+    }}>
+      Rating & Ulasan
+    </h2>
+
+    {reviews.length > 2 && (
+      <button
+        onClick={() => setShowAllReviews(!showAllReviews)}
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
+          border: "1.5px solid #186d22",
+          background: showAllReviews ? "#186d22" : "#fff",
+          color: showAllReviews ? "#fff" : "#186d22",
+          borderRadius: 99,
+          padding: "7px 16px",
+          fontSize: 12,
+          fontWeight: 700,
+          cursor: "pointer",
+          transition: "all .18s",
+          fontFamily: "'Plus Jakarta Sans', sans-serif",
+        }}
+      >
+        {showAllReviews ? "Tutup" : `Lihat Semua (${reviews.length})`}
+        <svg
+          width="12" height="12" viewBox="0 0 24 24"
+          fill="none" stroke="currentColor" strokeWidth="2.5"
+          style={{ transform: showAllReviews ? "rotate(180deg)" : "rotate(0)", transition: "transform .2s" }}
+        >
+          <path d="M6 9l6 6 6-6"/>
+        </svg>
+      </button>
+    )}
+  </div>
+
+  {/* ── RATING SUMMARY CARD ── */}
+  <div style={{
+    background: "linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%)",
+    border: "1px solid #d1fae5",
+    borderRadius: 20,
+    padding: "24px 28px",
+    marginBottom: 20,
+    display: "flex",
+    gap: 32,
+    alignItems: "center",
+  }}>
+    {/* Big number */}
+    <div style={{ textAlign: "center", flexShrink: 0 }}>
+      <div style={{
+        fontSize: 56,
+        fontWeight: 900,
+        color: "#111827",
+        lineHeight: 1,
+        fontFamily: "'Poppins', sans-serif",
+      }}>
+        {Number(averageRating).toFixed(1)}
+      </div>
+      <div style={{ marginTop: 8, fontSize: 20, color: "#f59e0b", letterSpacing: 2 }}>
+        {"★".repeat(Math.round(averageRating))}{"☆".repeat(5 - Math.round(averageRating))}
+      </div>
+      <div style={{ marginTop: 6, fontSize: 12, color: "#6b7280", fontWeight: 600 }}>
+        {totalReview} ulasan
+      </div>
+    </div>
+
+    {/* Divider */}
+    <div style={{ width: 1, height: 90, background: "#d1fae5", flexShrink: 0 }} />
+
+    {/* Star bars */}
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 7 }}>
+      {[5, 4, 3, 2, 1].map((star) => {
+        const count = reviews.filter((r) => Math.round(r.rating) === star).length;
+        const pct = totalReview > 0 ? (count / totalReview) * 100 : 0;
+        return (
+          <div key={star} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "#374151", width: 14, textAlign: "right", flexShrink: 0 }}>
+              {star}
+            </span>
+            <span style={{ fontSize: 12, color: "#f59e0b", flexShrink: 0 }}>★</span>
+            <div style={{
+              flex: 1,
+              height: 7,
+              borderRadius: 99,
+              background: "#e5e7eb",
+              overflow: "hidden",
+            }}>
+              <div style={{
+                height: "100%",
+                width: `${pct}%`,
+                borderRadius: 99,
+                background: star >= 4 ? "#22c55e" : star === 3 ? "#f59e0b" : "#ef4444",
+                transition: "width .6s ease",
+              }} />
+            </div>
+            <span style={{ fontSize: 11, color: "#9ca3af", fontWeight: 600, width: 22, textAlign: "right", flexShrink: 0 }}>
+              {count}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  </div>
+
+  {/* ── REVIEW LIST ── */}
+  {reviews.length === 0 ? (
+    <div style={{
+      padding: "40px 24px",
+      borderRadius: 16,
+      background: "#f9fafb",
+      border: "1px solid #e5e7eb",
+      textAlign: "center",
+    }}>
+      <div style={{ fontSize: 36, marginBottom: 10 }}>💬</div>
+      <p style={{ fontSize: 14, fontWeight: 700, color: "#374151", marginBottom: 4 }}>Belum ada ulasan</p>
+      <p style={{ fontSize: 12, color: "#9ca3af" }}>Jadilah yang pertama memberikan ulasan!</p>
+    </div>
+  ) : (
+    <div style={{
+      display: "flex",
+      flexDirection: "column",
+      gap: 12,
+      maxHeight: showAllReviews ? 520 : "unset",
+      overflowY: showAllReviews ? "auto" : "hidden",
+      paddingRight: showAllReviews ? 4 : 0,
+    }}>
+      {(showAllReviews ? reviews : reviews.slice(0, 2)).map((review) => {
+        const initials = (
+          review.nama_user ||
+          review.user?.nama ||
+          "User"
+        )
+          .trim()
+          .split(" ")
+          .slice(0, 2)
+          .map((w) => w?.[0]?.toUpperCase() || "")
+          .join("");
+
+        const avatarColors = [
+          { bg: "#dcfce7", color: "#15803d" },
+          { bg: "#dbeafe", color: "#1d4ed8" },
+          { bg: "#fce7f3", color: "#9d174d" },
+          { bg: "#fef3c7", color: "#92400e" },
+          { bg: "#ede9fe", color: "#5b21b6" },
+        ];
+        const colorIdx = (review.nama_user || "U").charCodeAt(0) % avatarColors.length;
+        const avatarColor = avatarColors[colorIdx];
+
+        return (
+          <div
+            key={review.id}
+            style={{
+              background: "#fff",
+              border: "1px solid #f3f4f6",
+              borderRadius: 16,
+              padding: "18px 20px",
+              boxShadow: "0 2px 10px rgba(0,0,0,0.04)",
+              transition: "box-shadow .2s",
+            }}
+          >
+            {/* Top row: avatar + name + date */}
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                {/* Avatar */}
+                <div style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: "50%",
+                  background: avatarColor.bg,
+                  color: avatarColor.color,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 14,
+                  fontWeight: 800,
+                  flexShrink: 0,
+                  fontFamily: "'Plus Jakarta Sans', sans-serif",
+                }}>
+                  {initials}
+                </div>
+                <div>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: "#111827", margin: 0 }}>
+                    {review.nama_user || review.user?.nama || "User"}
+                  </p>
+                  <p style={{ fontSize: 11, color: "#9ca3af", margin: "2px 0 0", fontWeight: 500 }}>
+                    {new Date(review.createdAt).toLocaleDateString("id-ID", {
+                      day: "numeric", month: "long", year: "numeric"
+                    })}
+                  </p>
+                </div>
+              </div>
+
+              {/* Stars (right-aligned) */}
+              <div style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
+                background: "#fffbeb",
+                border: "1px solid #fde68a",
+                borderRadius: 99,
+                padding: "4px 10px",
+                flexShrink: 0,
+              }}>
+                <span style={{ color: "#f59e0b", fontSize: 12 }}>★</span>
+                <span style={{ fontSize: 12, fontWeight: 800, color: "#92400e" }}>{review.rating}</span>
+              </div>
+            </div>
+
+            {/* Star row */}
+            <div style={{ fontSize: 13, color: "#f59e0b", marginBottom: 10, letterSpacing: 1 }}>
+              {"★".repeat(Math.round(review.rating))}
+              <span style={{ color: "#d1d5db" }}>
+                {"★".repeat(5 - Math.round(review.rating))}
+              </span>
+            </div>
+
+            {/* Comment */}
+            <p style={{
+              fontSize: 13.5,
+              color: "#374151",
+              lineHeight: 1.75,
+              margin: 0,
+            }}>
+              {review.komentar}
+            </p>
+
+            {/* Vote row */}
+            <div style={{
+              marginTop: 14,
+              paddingTop: 12,
+              borderTop: "1px solid #f3f4f6",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+            }}>
+              <span style={{ fontSize: 11, color: "#9ca3af", fontWeight: 600, marginRight: 4 }}>
+                Apakah ulasan ini membantu?
+              </span>
+              <button
+                onClick={() => voteReview(review.id, "helpful")}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 5,
+                  border: "1px solid #e5e7eb",
+                  background: "#f9fafb",
+                  borderRadius: 99,
+                  padding: "5px 12px",
+                  cursor: "pointer",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: "#374151",
+                  transition: "all .15s",
+                  fontFamily: "'Plus Jakarta Sans', sans-serif",
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = "#f0fdf4"; e.currentTarget.style.borderColor = "#86efac"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = "#f9fafb"; e.currentTarget.style.borderColor = "#e5e7eb"; }}
+              >
+                👍 <span>{review.total_membantu || 0}</span>
+              </button>
+              <button
+                onClick={() => voteReview(review.id, "unhelpful")}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 5,
+                  border: "1px solid #e5e7eb",
+                  background: "#f9fafb",
+                  borderRadius: 99,
+                  padding: "5px 12px",
+                  cursor: "pointer",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: "#374151",
+                  transition: "all .15s",
+                  fontFamily: "'Plus Jakarta Sans', sans-serif",
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = "#fef2f2"; e.currentTarget.style.borderColor = "#fca5a5"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = "#f9fafb"; e.currentTarget.style.borderColor = "#e5e7eb"; }}
+              >
+                👎 <span>{review.total_tidak_membantu || 0}</span>
+              </button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  )}
+</div>
+
 
               {/* Fasilitas */}
               <div style={{ marginBottom: 24 }}>

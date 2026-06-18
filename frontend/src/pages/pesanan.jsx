@@ -46,17 +46,33 @@ const STATUS_MAP = {
     icon: CheckCircle2,
   },
   dibatalkan: {
-    label: "Dibatalkan",
+    label: "Pembatalan Berhasil",
     color: "bg-red-50 text-red-600 ring-1 ring-red-200",
     border: "border-l-red-400",
     dot: "bg-red-400",
-    icon: XCircle,
+    icon: CheckCircle2,
   },
   permintaan_pembatalan: {
     label: "Pengajuan Batal",
     color: "bg-orange-50 text-orange-700 ring-1 ring-orange-200",
     border: "border-l-orange-400",
     dot: "bg-orange-400",
+    icon: XCircle,
+  },
+  sudah_bayar: {
+    label: "Sudah Bayar",
+    color:
+      "bg-blue-50 text-blue-700 ring-1 ring-blue-200",
+    border:
+      "border-l-blue-400",
+    dot: "bg-blue-500",
+    icon: CheckCircle2,
+  },
+  expired: {
+    label: "Expired",
+    color: "bg-red-50 text-red-700 ring-1 ring-red-200",
+    border: "border-l-red-500",
+    dot: "bg-red-500",
     icon: XCircle,
   },
 };
@@ -105,6 +121,121 @@ const getRemainingTime = (expiresAt) => {
   ).padStart(2, "0");
 
   return `${hours}:${minutes}:${seconds}`;
+};
+const getCashRemainingTime = (
+  item
+) => {
+
+  if (
+    item.payment_channel !== "cash"
+  ) {
+    return null;
+  }
+
+  if (
+    item.status_pemesanan !==
+    "menunggu_kedatangan"
+  ) {
+    return null;
+  }
+
+  const firstSlot =
+    item.detail_pemesanan?.[0];
+
+  if (!firstSlot) {
+    return null;
+  }
+
+  const playTime =
+    new Date(
+      `${firstSlot.tanggal}T${String(
+        firstSlot.jam_mulai
+      ).slice(0, 5)}:00+08:00`
+    );
+
+  const timerStart =
+    new Date(
+      playTime.getTime() -
+        60 * 60 * 1000
+    );
+
+  const now = Date.now();
+
+  if (
+    now <
+    timerStart.getTime()
+  ) {
+    return null;
+  }
+
+  const diff =
+    playTime.getTime() -
+    now;
+
+  if (diff <= 0) {
+    return "00:00:00";
+  }
+
+  const hours = String(
+    Math.floor(diff / 3600000)
+  ).padStart(2, "0");
+
+  const minutes = String(
+    Math.floor(
+      (diff % 3600000) /
+        60000
+    )
+  ).padStart(2, "0");
+
+  const seconds = String(
+    Math.floor(
+      (diff % 60000) / 1000
+    )
+  ).padStart(2, "0");
+
+  return `${hours}:${minutes}:${seconds}`;
+};
+const canCancelCashBooking = (
+  item
+) => {
+
+  if (
+    item.payment_channel !== "cash"
+  ) {
+    return false;
+  }
+
+  if (
+    item.status_pemesanan !==
+    "menunggu_kedatangan"
+  ) {
+    return false;
+  }
+
+  const firstSlot =
+    item.detail_pemesanan?.[0];
+
+  if (!firstSlot) {
+    return false;
+  }
+
+  const playTime =
+    new Date(
+      `${firstSlot.tanggal}T${String(
+        firstSlot.jam_mulai
+      ).slice(0, 5)}:00+08:00`
+    );
+
+  const timerStart =
+    new Date(
+      playTime.getTime() -
+      60 * 60 * 1000
+    );
+
+  return (
+    Date.now() <
+    timerStart.getTime()
+  );
 };
 
 function getPaymentMethodLabel(item) {
@@ -190,7 +321,18 @@ useEffect(() => {
       try {
         if (!user?.id) { setLoading(false); return; }
         const response = await api.get(`/pemesanan/user/${user.id}`);
-        setPesanan(Array.isArray(response.data) ? response.data : []);
+        const activeOrders = (Array.isArray(response.data)
+          ? response.data
+          : []
+        ).filter(
+          (item) =>
+            ![
+              "selesai",
+              "dibatalkan",
+              "expired",
+            ].includes(item.status_pemesanan)
+        );
+        setPesanan(activeOrders);
       } catch (error) {
         console.error("Gagal mengambil pesanan:", error);
         setPesanan([]);
@@ -242,6 +384,7 @@ const handleOpenPaymentPage = (item) => {
         noWhatsapp: item.no_whatsapp,
         fromPesanan: true,
         paymentConfirmedAt: item.confirmed_arrival_at,
+        statusPemesanan: item.status_pemesanan,
 
         // ✅ UBAH: mapping detail_layanan dengan nama_layanan
         selectedServiceDetails: Array.isArray(item.detail_layanan)
@@ -323,11 +466,20 @@ const handleSubmitCancellation = async (
         `/pemesanan/user/${user.id}`
       );
 
-    setPesanan(
+    const activeOrders = (
       Array.isArray(refresh.data)
         ? refresh.data
         : []
+    ).filter(
+      (item) =>
+        ![
+          "selesai",
+          "dibatalkan",
+          "expired",
+        ].includes(item.status_pemesanan)
     );
+
+    setPesanan(activeOrders);
 
   } catch (error) {
 
@@ -473,22 +625,49 @@ console.log("DETAIL =", item.detail_pemesanan);
 
                       <div className="flex items-center gap-2 shrink-0">
                         {/* ===== NEW CODE TIMER ===== */}
-{item.status_pemesanan ===
-  "menunggu_pembayaran" &&
-  item.payment_expires_at && (
-    <div className="flex items-center gap-1 rounded-full border border-orange-200 bg-orange-50 px-3 py-1.5">
-      <Timer
-        size={13}
-        className="text-orange-500"
-      />
+                        {
+                          item.payment_channel !==
+                            "cash" &&
+                          item.status_pemesanan ===
+                            "menunggu_pembayaran" &&
+                          item.payment_expires_at && (
+                            <div className="flex items-center gap-1 rounded-full border border-orange-200 bg-orange-50 px-3 py-1.5">
+                              <Timer
+                                size={13}
+                                className="text-orange-500"
+                              />
+                              <span className="text-xs font-bold text-orange-600">
+                                {getRemainingTime(
+                                  item.payment_expires_at
+                                )}
+                              </span>
+                            </div>
+                        )}
+                        {
+                          item.payment_channel ===
+                            "cash" &&
+                          item.status_pemesanan ===
+                            "menunggu_kedatangan" &&
+                          getCashRemainingTime(
+                            item
+                          ) && (
+                            <div className="flex items-center gap-1 rounded-full border border-orange-200 bg-orange-50 px-3 py-1.5">
 
-      <span className="text-xs font-bold text-orange-600">
-        {getRemainingTime(
-          item.payment_expires_at
-        )}
-      </span>
-    </div>
-)}
+                              <Timer
+                                size={13}
+                                className="text-orange-500"
+                              />
+
+                              <span className="text-xs font-bold text-orange-600">
+                                {
+                                  getCashRemainingTime(
+                                    item
+                                  )
+                                }
+                              </span>
+                            </div>
+                          )
+                        }
                         <span className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full ${st.color}`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} />
                           {st.label}
@@ -522,7 +701,16 @@ console.log("DETAIL =", item.detail_pemesanan);
 
                   {/* ── ACTION ROW ── */}
                   <div className="relative z-10 px-5 pb-5 flex items-center justify-between gap-3 flex-wrap">
-                    {item.status_pemesanan === "menunggu_pembayaran" && (
+                    {(
+                        [
+                          "menunggu_pembayaran",
+                          "sudah_bayar",
+                        ].includes(
+                          item.status_pemesanan
+                        )
+                        ||
+                        canCancelCashBooking(item)
+                      ) && (
                       <button
                         type="button"
                         onClick={() => setCancelingId(cancelingId === item.id ? null : item.id)}
@@ -545,7 +733,18 @@ console.log("DETAIL =", item.detail_pemesanan);
                   </div>
 
                   {/* ── CANCEL FORM ── */}
-                  {cancelingId === item.id && item.status_pemesanan === "menunggu_pembayaran" && (
+                  {cancelingId === item.id &&
+                    (
+                      [
+                        "menunggu_pembayaran",
+                        "sudah_bayar",
+                      ].includes(
+                        item.status_pemesanan
+                      )
+                      ||
+                      canCancelCashBooking(item)
+                    )
+                    && (
                     <div className="relative z-10 mx-5 mb-5 rounded-xl border border-red-100 bg-red-50 p-4">
                       <p className="mb-2 text-sm font-semibold text-red-700">Alasan Pembatalan</p>
                       <textarea

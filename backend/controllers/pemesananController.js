@@ -5,11 +5,14 @@ const MetodeTransfer = require("../models/metodeTransfer");
 const sequelize = require("../config/database");
 const { Op } = require("sequelize");
 const DetailPemesanan = require("../models/detailPemesanan");
-
+const User = require("../models/user");
 const Jadwal = require("../models/jadwal");
 const Lapangan = require("../models/Lapangan");
 const DetailLayananPemesanan = require("../models/detailLayananPemesanan");
 const LayananTambahan = require("../models/layananTambahanModel");
+const {
+  Review
+} = require("../models");
 const generateKodePemesanan = () => {
   const now = new Date();
   const tanggal = now.toISOString().slice(0, 10).replace(/-/g, "");
@@ -193,7 +196,14 @@ const getPemesananByUser = async (req, res) => {
     const pemesananList = await Pemesanan.findAll({
       where: {
         user_id: userId,
-        riwayat_status: null,
+
+        status_pemesanan: {
+          [Op.notIn]: [
+            "selesai",
+            "dibatalkan",
+            "expired",
+          ],
+        },
       },
       order: [["id", "DESC"]],
     });
@@ -250,39 +260,155 @@ const getRiwayatByUser = async (req, res) => {
   try {
     const { userId } = req.params;
 
-    const data = await Pemesanan.findAll({
+    const riwayatList = await Pemesanan.findAll({
       where: {
         user_id: userId,
-        riwayat_status: null,
-      },
-
-      include: [
-        {
-          model: DetailPemesanan,
-          as: "detail_pemesanan",
-        },
-
-        {
-          model: Lapangan,
-          as: "lapangan",
-          attributes: [
-            "id",
-            "nama",
-            "alamat",
+        status_pemesanan: {
+          [Op.in]: [
+            "selesai",
+            "dibatalkan",
+            "expired",
           ],
         },
-      ],
-
+      },
       order: [["id", "DESC"]],
     });
 
-    return res.status(200).json(data);
+    const data = await Promise.all(
+      riwayatList.map(async (item) => {
+        const detail =
+          await DetailPemesanan.findAll({
+            where: {
+              pemesanan_id: item.id,
+            },
+            order: [
+              ["tanggal", "ASC"],
+            ],
+          });
+
+        const layanan =
+          await DetailLayananPemesanan.findAll({
+            where: {
+              pemesanan_id: item.id,
+            },
+
+            include: [
+              {
+                model:
+                  LayananTambahan,
+                as: "layanan",
+
+                attributes: [
+                  "id",
+                  "nama_layanan",
+                ],
+              },
+            ],
+          });
+
+        const lapangan =
+          await Lapangan.findByPk(
+          item.lapangan_id
+          );
+
+          console.log(
+            "CEK REVIEW PEMESANAN:",
+            item.id
+          );
+
+          const review =
+            await Review.findOne({
+              where: {
+                pemesananId: item.id,
+              },
+            });
+
+          console.log(
+            "HASIL REVIEW:",
+            review
+          );
+
+        return {
+          ...item.toJSON(),
+
+          detail_pemesanan: detail,
+
+          detail_layanan: layanan,
+
+          lapangan,
+
+          review,
+        };
+      })
+    );
+
+    return res.status(200).json(
+      data
+    );
+
   } catch (error) {
-    console.error("GET riwayat by user error:", error);
+
+    console.error(
+      "GET riwayat by user error:",
+      error
+    );
+
     return res.status(500).json({
-      message: "Gagal mengambil data riwayat",
+      message:
+        "Gagal mengambil data riwayat",
     });
   }
+};
+
+const getRiwayatAdmin =
+  async (req, res) => {
+    try {
+      const data =
+        await Pemesanan.findAll({
+          where: {
+            status_pemesanan: {
+              [Op.in]: [
+                "selesai",
+                "dibatalkan",
+                "expired",
+              ],
+            },
+          },
+
+          include: [
+            {
+              model:
+                DetailPemesanan,
+              as:
+                "detail_pemesanan",
+            },
+
+            {
+              model: Lapangan,
+              as: "lapangan",
+            },
+          ],
+
+          order: [
+            ["id", "DESC"],
+          ],
+        });
+
+      return res
+        .status(200)
+        .json(data);
+
+    } catch (error) {
+
+      console.error(error);
+
+      return res
+        .status(500)
+        .json({
+          message:
+            "Gagal mengambil riwayat admin",
+        });
+    }
 };
 
 const createPemesanan = async (req, res) => {
@@ -332,6 +458,55 @@ const createPemesanan = async (req, res) => {
         message: "selectedSlots wajib diisi minimal 1 slot",
       });
     }
+    // =====================================================
+// CEK USER DIBLOKIR
+// =====================================================
+
+const user = await User.findByPk(user_id);
+
+if (!user) {
+  await transaction.rollback();
+
+  return res.status(404).json({
+    message: "User tidak ditemukan",
+  });
+}
+
+// ========================================
+// AUTO UNBLOCK
+// ========================================
+
+if (
+  user.akun_diblokir &&
+  user.blocked_until &&
+  new Date() >= new Date(user.blocked_until)
+) {
+  await user.update({
+    akun_diblokir: false,
+    blocked_until: null,
+    jumlah_no_show: 0,
+  });
+}
+
+// ========================================
+// END AUTO UNBLOCK
+// ========================================
+
+if (
+  user.akun_diblokir &&
+  user.blocked_until &&
+  new Date() < new Date(user.blocked_until)
+) {
+  await transaction.rollback();
+
+  return res.status(403).json({
+    message:
+      "Akun Anda diblokir sementara karena 3 kali tidak hadir pada pemesanan cash",
+  });
+}
+// =====================================================
+// END CEK USER DIBLOKIR
+// =====================================================
 
     const metodePembayaran = await resolveMetodePembayaran(
       metode_pembayaran_id,
@@ -671,11 +846,11 @@ const updateStatusPemesanan = async (req, res) => {
 
       for (const slot of detailSlots) {
 
-        await Jadwal.update(
-          {
-            status: "booking",
-          },
-          {
+       await Jadwal.update(
+        {
+          status: "sedang_dimainkan",
+        },
+              {
             where: {
               lapangan_id:
                 data.lapangan_id,
@@ -718,6 +893,9 @@ const updateStatusPemesanan = async (req, res) => {
   });
 }
 };
+
+
+
 const selesaiPemesanan = async (req, res) => {
   try {
     const { id } = req.params;
@@ -805,9 +983,16 @@ const setujuiPembatalan = async (
 
     await data.update({
       status_pemesanan: "dibatalkan",
-      riwayat_status: RIWAYAT_STATUS.BATAL,
-      alasan_batal: alasan_batal || data.alasan_batal,
-      dibatalkan_at: new Date(),
+
+      riwayat_status:
+        RIWAYAT_STATUS.BATAL,
+
+      alasan_batal:
+        alasan_batal ||
+        data.alasan_batal,
+
+      dibatalkan_at:
+        new Date(),
     });
 
     // ===== NEW CODE TAHAP 7C =====
@@ -930,7 +1115,45 @@ if (data.payment_channel === "cash") {
 }
 
 // ===== END NEW CODE =====
+if (
+  data.payment_channel ===
+  "cash"
+) {
 
+  const firstSlot =
+    data.detail_pemesanan?.[0];
+
+  if (firstSlot) {
+
+    const playTime =
+      new Date(
+        `${firstSlot.tanggal}T${String(
+          firstSlot.jam_mulai
+        ).slice(0, 5)}:00+08:00`
+      );
+
+    const timerStart =
+      new Date(
+        playTime.getTime() -
+        60 * 60 * 1000
+      );
+
+    if (
+      Date.now() >=
+      timerStart.getTime()
+    ) {
+
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message:
+            "Pembatalan cash hanya dapat dilakukan sebelum 1 jam waktu bermain",
+        });
+
+    }
+  }
+}
     await data.update({
       status_pemesanan:
         "menunggu_persetujuan_pembatalan",
@@ -996,7 +1219,7 @@ const konfirmasiPembayaran = async (
 
     await data.update({
       status_pemesanan:
-        "sedang_dimainkan",
+        "sudah_bayar",
     });
 
     return res.status(200).json({
@@ -1049,6 +1272,7 @@ module.exports = {
   getPemesananById,
   getPemesananByUser,
   getRiwayatByUser,
+  getRiwayatAdmin,
   createPemesanan,
   updatePemesanan,
   updateStatusPemesanan,

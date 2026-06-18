@@ -25,6 +25,11 @@ router.patch("/:id/konfirmasi-pembayaran", auth, ctrl.konfirmasiPembayaran);
 // END NEW CODE
 // =====================================================
 
+router.get(
+  "/riwayat-admin",
+  auth,
+  ctrl.getRiwayatAdmin
+);
 // ===== NEW CODE TAHAP 7B =====
 router.patch(
   "/:id/ajukan-pembatalan",

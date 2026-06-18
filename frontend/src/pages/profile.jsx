@@ -35,6 +35,9 @@ export default function Profile() {
   const email = user?.email || "-";
   const phone = user?.no_whatsapp || user?.noWa || "-";
   const role = user?.role || "Pengguna";
+  const peringatanNoShow = user?.peringatan_no_show;
+  const jumlahNoShow = user?.jumlah_no_show || 0;
+  const akunDiblokir = user?.akun_diblokir || false;
 
   const menuItems = [
     {
@@ -114,6 +117,30 @@ export default function Profile() {
                       </p>
                     </div>
                   </div>
+                  {peringatanNoShow && (
+                  <div className="mt-4 w-full rounded-2xl border border-orange-200 bg-orange-50 p-4">
+                    <p className="text-sm font-bold text-orange-700">
+                      {peringatanNoShow}
+                    </p>
+
+                    <p className="mt-1 text-xs text-orange-600">
+                      Total No Show:
+                      {jumlahNoShow}/3
+                    </p>
+                  </div>
+                )}
+
+                {akunDiblokir && (
+                  <div className="mt-4 w-full rounded-2xl border border-red-200 bg-red-50 p-4">
+                    <p className="text-sm font-bold text-red-700">
+                      Akun Diblokir Sementara
+                    </p>
+
+                    <p className="mt-1 text-xs text-red-600">
+                      Karena 3 kali tidak hadir pada pemesanan cash.
+                    </p>
+                  </div>
+                )}
                 </div>
 
                 <div className="mt-4 flex w-full gap-3">
