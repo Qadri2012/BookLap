@@ -1,8 +1,8 @@
 // models/index.js
-const User = require("./User");
-const Lapangan = require("./Lapangan");
-const Booking = require("./Booking");
-const Review = require("./Review");
+const User = require("./user");
+const Lapangan = require("./lapangan");
+const Booking = require("./booking");
+const Review = require("./review");
 const ReviewVote = require("./reviewVote");
 const Pemesanan = require("./pemesanan");
 const DetailPemesanan = require("./detailPemesanan");
