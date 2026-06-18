@@ -24,7 +24,7 @@ import AdminLayout from "./layouts/AdminLayout";
 import AdminLapangan from "./pages/admin/Lapangan";
 import AdminLapanganForm from "./pages/admin/LapanganForm";
 import AdminBooking from "./pages/admin/Booking";
-import AdminJadwal from "./pages/admin/jadwal";
+import AdminJadwal from "./pages/admin/Jadwal";
 import AdminUser from "./pages/admin/User";
 import AdminLaporan from "./pages/admin/Laporan";
 import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
