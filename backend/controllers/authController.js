@@ -28,6 +28,20 @@ const mailTransporter = nodemailer.createTransport({
   },
 });
 
+mailTransporter.verify(
+  (error, success) => {
+    if (error) {
+      console.log(
+        "SMTP ERROR:",
+        error
+      );
+    } else {
+      console.log(
+        "SMTP READY"
+      );
+    }
+  }
+);
 function waitSessionSave(req) {
   return new Promise((resolve, reject) => {
     req.session.save((err) => {
@@ -261,6 +275,76 @@ async function sendAdminOtpEmail(toEmail, otpCode) {
           ${otpCode}
         </div>
         <p>Kode ini berlaku 10 menit.</p>
+      </div>
+    `,
+  });
+}
+
+async function sendUserOtpEmail(
+  toEmail,
+  otpCode
+) {
+  try {
+    console.log("EMAIL TUJUAN:", toEmail);
+    console.log("OTP YANG DIKIRIM:", otpCode);
+
+    const info =
+      await mailTransporter.sendMail({
+        from:
+          process.env.EMAIL_FROM ||
+          process.env.SMTP_USER,
+
+        to: toEmail,
+
+        subject:
+          "Verifikasi Akun BookLap",
+
+        html: `
+          <h2>BookLap</h2>
+          <p>Kode OTP Anda:</p>
+          <h1>${otpCode}</h1>
+        `,
+      });
+
+    console.log(
+      "EMAIL BERHASIL TERKIRIM"
+    );
+
+    console.log(info);
+  } catch (err) {
+    console.error(
+      "EMAIL GAGAL DIKIRIM"
+    );
+
+    console.error(err);
+  }
+
+
+  await mailTransporter.sendMail({
+    from:
+      process.env.EMAIL_FROM ||
+      process.env.SMTP_USER,
+
+    to: toEmail,
+
+    subject: "Verifikasi Akun BookLap",
+
+    html: `
+      <div style="font-family:Arial">
+        <h2>Verifikasi Akun BookLap</h2>
+
+        <p>Kode OTP Anda:</p>
+
+        <h1
+          style="
+            color:#16a34a;
+            letter-spacing:4px;
+          "
+        >
+          ${otpCode}
+        </h1>
+
+        <p>Berlaku 10 menit.</p>
       </div>
     `,
   });
@@ -713,250 +797,224 @@ exports.getCaptcha = (req, res) => {
   });
 };
 
-exports.sendOtp = async (req, res) => {
-  try {
-    const pending = req.session.pendingRegister;
+exports.verifyEmailOtp =
+  async (req, res) => {
+    try {
+      const otp =
+        String(
+          req.body.otp || ""
+        ).trim();
 
-    if (!pending) {
-      return res.status(400).json({
-        message: "Data registrasi belum ada. Silakan daftar ulang.",
-        msg: "Data registrasi belum ada. Silakan daftar ulang.",
-      });
-    }
+      const pending =
+        req.session.pendingRegister;
 
-    if (!process.env.WHATSAPP_TOKEN || !process.env.WHATSAPP_PHONE_NUMBER_ID) {
-      return res.status(500).json({
-        message: "WHATSAPP_TOKEN atau WHATSAPP_PHONE_NUMBER_ID belum diisi",
-        msg: "WHATSAPP_TOKEN atau WHATSAPP_PHONE_NUMBER_ID belum diisi",
-      });
-    }
-
-    const otp = generateOtp();
-    const to = normalizeWhatsAppNumber(pending.no_hp);
-
-    req.session.pendingRegister.otp = otp;
-    req.session.pendingRegister.otpExpiresAt = Date.now() + 5 * 60 * 1000;
-    req.session.pendingRegister.otpAttempts = 0;
-
-    await axios.post(
-      `https://graph.facebook.com/v22.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`,
-      {
-        messaging_product: "whatsapp",
-        to,
-        type: "template",
-        template: {
-          name: "hello_world",
-          language: { code: "en_US" },
-        },
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    req.session.otpPhone = to;
-    req.session.otpVerified = false;
-    console.log("OTP:", otp);
-    await waitSessionSave(req);
-
-    return res.json({
-      message: "Kode OTP telah dikirim ke WhatsApp",
-      msg: "Kode OTP telah dikirim ke WhatsApp",
-      phone: maskPhone(pending.no_hp),
-    });
-  } catch (err) {
-    console.error("SEND OTP ERROR:", err.response?.data || err);
-    return res.status(500).json({
-      message: "Gagal mengirim OTP",
-      msg: "Gagal mengirim OTP",
-      error: err.response?.data?.error?.message || err.message,
-    });
-  }
-};
-
-exports.verifyOtp = async (req, res) => {
-  try {
-    const code = String(req.body.otp || "").trim();
-    const pending = req.session.pendingRegister;
-
-    if (!pending) {
-      return res.status(400).json({
-        message: "Sesi verifikasi tidak ditemukan",
-        msg: "Sesi verifikasi tidak ditemukan",
-      });
-    }
-
-    if (!pending.otp || !pending.otpExpiresAt) {
-      return res.status(400).json({
-        message: "OTP belum dibuat. Silakan kirim ulang.",
-        msg: "OTP belum dibuat. Silakan kirim ulang.",
-      });
-    }
-
-    if (Date.now() > pending.otpExpiresAt) {
-      return res.status(400).json({
-        message: "OTP sudah kedaluwarsa",
-        msg: "OTP sudah kedaluwarsa",
-      });
-    }
-
-    if (code !== pending.otp) {
-      req.session.pendingRegister.otpAttempts =
-        (req.session.pendingRegister.otpAttempts || 0) + 1;
-
-      if (req.session.pendingRegister.otpAttempts >= 5) {
-        req.session.pendingRegister = null;
+      if (!pending) {
+        return res
+          .status(400)
+          .json({
+            message:
+              "Sesi registrasi tidak ditemukan",
+          });
       }
 
-      await waitSessionSave(req);
+      if (
+        Date.now() >
+        pending.otpExpiresAt
+      ) {
+        return res
+          .status(400)
+          .json({
+            message:
+              "OTP sudah kedaluwarsa",
+          });
+      }
 
-      return res.status(400).json({
-        message: "OTP salah",
-        msg: "OTP salah",
-      });
-    }
+      if (otp !== pending.otp) {
+        req.session.pendingRegister.otpAttempts =
+          (
+            req.session
+              .pendingRegister
+              .otpAttempts || 0
+          ) + 1;
 
-    const existing = await User.findOne({ where: { email: pending.email } });
-    if (existing) {
-      req.session.pendingRegister = null;
-      req.session.otpPhone = null;
-      await waitSessionSave(req);
+        await waitSessionSave(
+          req
+        );
 
-      return res.status(400).json({
-        message: "Email sudah terdaftar",
-        msg: "Email sudah terdaftar",
-      });
-    }
+        return res
+          .status(400)
+          .json({
+            message:
+              "OTP salah",
+          });
+      }
 
-    const hashed = await bcrypt.hash(pending.password, 12);
+      const existing =
+        await User.findOne({
+          where: {
+            email:
+              pending.email,
+          },
+        });
 
-    const user = await User.create({
-        nama: pending.nama,
-        no_hp: pending.no_hp,
-        email: pending.email,
-        password: hashed,
-        role: pending.role || "user",
-        level_akses: pending.level_akses || null,
-      });
-      const adminMaster = await AdminMaster.findByPk(
-        pending.adminMasterId
+      if (existing) {
+        return res
+          .status(400)
+          .json({
+            message:
+              "Email sudah terdaftar",
+          });
+      }
+
+      const hashed =
+        await bcrypt.hash(
+          pending.password,
+          12
+        );
+
+      const user =
+        await User.create({
+          nama:
+            pending.nama,
+
+          no_hp:
+            pending.no_hp,
+
+          email:
+            pending.email,
+
+          password:
+            hashed,
+
+          role: "user",
+
+          status:
+            "active",
+        });
+
+      req.session.pendingRegister =
+        null;
+
+      await waitSessionSave(
+        req
       );
 
-    req.session.pendingRegister = null;
-    req.session.otpPhone = null;
-    req.session.otpVerified = true;
-    await waitSessionSave(req);
+      return res.json({
+        message:
+          "Verifikasi berhasil. Akun berhasil dibuat.",
 
-    return res.json({
-      message: "Verifikasi berhasil. Silakan login.",
-      msg: "Verifikasi berhasil. Silakan login.",
-      user: toUserPayload(user),
-    });
-  } catch (err) {
-    console.error("VERIFY OTP ERROR:", err);
-    return res.status(500).json({
-      message: "Gagal verifikasi OTP",
-      msg: "Gagal verifikasi OTP",
-      error: err.message,
-    });
-  }
-};
+        user:
+          toUserPayload(
+            user
+          ),
+      });
+    } catch (err) {
+      console.error(err);
 
+      return res
+        .status(500)
+        .json({
+          message:
+            "Gagal verifikasi OTP",
+          error:
+            err.message,
+        });
+    }
+  };
 // REGISTER
 exports.register = async (req, res) => {
   try {
-    const { nama, no_hp, email, password, captchaToken } = req.body;
+    const {
+      nama,
+      no_hp,
+      email,
+      password,
+      captchaToken,
+    } = req.body;
 
     const namaClean = (nama || "").trim();
     const noHpClean = normalizeE164(no_hp || "");
-    const emailClean = (email || "").trim().toLowerCase();
+    const emailClean = (email || "")
+      .trim()
+      .toLowerCase();
+
     const passwordClean = password || "";
 
-    if (!namaClean || !noHpClean || !emailClean || !passwordClean) {
-      return res.status(400).json({
-        message: "Semua field wajib diisi",
-        msg: "Semua field wajib diisi",
+    const validationError =
+      validateRegisterFields({
+        nama: namaClean,
+        no_hp: noHpClean,
+        email: emailClean,
+        password: passwordClean,
       });
-    }
-
-    const validationError = validateRegisterFields({
-      nama: namaClean,
-      no_hp: noHpClean,
-      email: emailClean,
-      password: passwordClean,
-    });
 
     if (validationError) {
       return res.status(400).json({
         message: validationError,
-        msg: validationError,
       });
     }
 
-    const passwordError = validatePasswordStrength(
-      passwordClean,
-      namaClean,
-      emailClean
-    );
+    const captchaCheck =
+      await verifyRecaptcha(
+        captchaToken
+      );
 
-    if (passwordError) {
-      return res.status(400).json({
-        message: passwordError,
-        msg: passwordError,
-      });
-    }
-
-    //verifikasi Google reCAPTCHA
-    const captchaCheck = await verifyRecaptcha(captchaToken);
     if (!captchaCheck.ok) {
       return res.status(400).json({
         message: captchaCheck.message,
-        msg: captchaCheck.message,
       });
     }
 
-    const existing = await User.findOne({ where: { email: emailClean } });
+    const existing =
+      await User.findOne({
+        where: {
+          email: emailClean,
+        },
+      });
+
     if (existing) {
       return res.status(400).json({
-        message: "Email sudah terdaftar",
-        msg: "Email sudah terdaftar",
+        message:
+          "Email sudah terdaftar",
       });
     }
+
+    const otp = generateOtp();
 
     req.session.pendingRegister = {
       nama: namaClean,
       no_hp: noHpClean,
       email: emailClean,
       password: passwordClean,
-      otp: null,
-      otpExpiresAt: null,
+
+      otp,
+
+      otpExpiresAt:
+        Date.now() +
+        10 * 60 * 1000,
+
       otpAttempts: 0,
     };
 
-    req.session.save((err) => {
-      if (err) {
-        return res.status(500).json({
-          message: "Gagal menyimpan data registrasi sementara",
-          msg: "Gagal menyimpan data registrasi sementara",
-          error: err.message,
-        });
-      }
+    await waitSessionSave(req);
 
-      return res.status(201).json({
-        message: "Data registrasi tersimpan. Lanjutkan verifikasi WhatsApp.",
-        msg: "Data registrasi tersimpan. Lanjutkan verifikasi WhatsApp.",
-        otpRequired: true,
-        phone: maskPhone(noHpClean),
-      });
+    await sendUserOtpEmail(
+      emailClean,
+      otp
+    );
+
+    return res.status(201).json({
+      message:
+        "Kode verifikasi telah dikirim ke email Anda.",
+
+      otpRequired: true,
+      email: emailClean,
     });
   } catch (err) {
-    console.error("REGISTER ERROR:", err);
+    console.error(err);
+
     return res.status(500).json({
       message: "Server error",
-      msg: "Server error",
       error: err.message,
     });
   }

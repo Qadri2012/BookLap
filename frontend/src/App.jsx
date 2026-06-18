@@ -10,7 +10,7 @@ import Login from "./pages/login";
 import LoginMitra from "./pages/loginMitra";
 import LoginAdmin from "./pages/loginAdmin";
 import TentangKami from "./pages/tentangKami";
-import VerifyPhone from "./pages/VerifyPhone";
+
 import VerifyOtp from "./pages/VerifyOtp";
 import Pemesanan from "./pages/pemesanan";
 import Transfer from "./pages/transfer";
@@ -59,7 +59,7 @@ function App() {
           {/* <Route path="/login" element={<LoginSelect />} /> */}
           <Route path="/login-mitra" element={<LoginMitra />} />
           <Route path="/login-admin" element={<LoginAdmin />} />
-          <Route path="/verify-phone" element={<VerifyPhone />} />
+          
           <Route path="/verify-otp" element={<VerifyOtp />} />
           <Route path="/tentangkami" element={<TentangKami />} />
           <Route path="/lapangan" element={<Lapangan />} />

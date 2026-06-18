@@ -595,12 +595,14 @@ export default function Login() {
         type: "success",
         msg:
           data?.message ||
-          "Data tersimpan. Silakan verifikasi lewat WhatsApp.",
+          "Kode verifikasi telah dikirim ke email Anda.",
       });
 
       setTimeout(() => {
-        navigate("/verify-phone", {
-          state: { phone: `+${fullPhone}` },
+        navigate("/verify-otp", {
+          state: {
+            email: rEmail.toLowerCase(),
+          },
           replace: true,
         });
       }, 900);

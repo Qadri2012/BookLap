@@ -1907,57 +1907,66 @@ const totalReview =
             </div>
 
             {/* ═══ KOLOM KANAN — Sticky Card ═══ */}
-            <div style={{ position:"sticky", top:100, marginTop:20, animation:"fadeUp .45s .1s ease both" }}>
-              <div style={{ background:"#fff", border:"1px solid #e5e7eb", borderRadius:16, overflow:"hidden", boxShadow:"0 4px 24px rgba(0,0,0,.07)" }}>
-                <div style={{ padding:"18px 20px", borderBottom:"1px solid #f3f4f6" }}>
-                  <p style={{ fontSize:12, color:"#6b7280", fontWeight:600, marginBottom:4 }}>Harga Mulai</p>
-                  <div style={{ display:"flex", alignItems:"baseline", gap:4 }}>
-                    <span style={{ fontSize:24, fontWeight:800, color:"#dc2626", fontFamily:"'Poppins',sans-serif" }}>
+            <div style={{ position: "sticky", top: 100, marginTop: 20, animation: "fadeUp .45s .1s ease both" }}>
+              <div style={{
+                background: "#fff",
+                border: "1px solid #e5e7eb",
+                borderRadius: 16,
+                overflow: "hidden",
+                boxShadow: "0 4px 24px rgba(0,0,0,.07)",
+              }}>
+
+                {/* Harga + Rating */}
+                <div style={{ padding: "20px 20px 16px" }}>
+                  <p style={{ fontSize: 12, color: "#6b7280", fontWeight: 500, margin: "0 0 6px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                    Harga mulai
+                  </p>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: 12 }}>
+                    <span style={{ fontSize: 26, fontWeight: 700, color: "#dc2626", fontFamily: "'Poppins',sans-serif" }}>
                       Rp {field.harga.toLocaleString("id-ID")}
                     </span>
-                    <span style={{ fontSize:13, color:"#9ca3af", fontWeight:500 }}>/sesi</span>
+                    <span style={{ fontSize: 13, color: "#9ca3af" }}>/sesi</span>
+                  </div>
+
+                  {/* Rating pill */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "10px 12px", background: "#f9fafb", borderRadius: 8 }}>
+                    <span style={{ color: "#f59e0b", fontSize: 15, lineHeight: 1 }}>★</span>
+                    <span style={{ fontWeight: 600, fontSize: 14, color: "#111827" }}>
+                      {averageRating.toFixed(1)}
+                    </span>
+                    <span style={{ color: "#9ca3af", fontSize: 13 }}>
+                      · {totalReview} ulasan
+                    </span>
                   </div>
                 </div>
-                <div style={{ padding:"12px 20px", borderBottom:"1px solid #f3f4f6", display:"flex", alignItems:"center", gap:8 }}>
-                  {field.reviews > 0 ? (
-                    <>
-                      <Stars count={Math.round(field.rating)} />
-                      <span style={{ fontWeight:700, fontSize:13, color:"#374151" }}>{field.rating}</span>
-                      <span style={{ color:"#9ca3af", fontSize:12 }}>· {field.reviews} ulasan</span>
-                    </>
-                  ) : (
-                    <span style={{ fontSize:12, color:"#9ca3af" }}>Belum ada ulasan</span>
-                  )}
+
+                <div style={{ height: 1, background: "#f3f4f6" }} />
+
+                {/* Tombol CTA */}
+                <div style={{ padding: "16px 20px 20px" }}>
+                  <button
+                    onClick={handleScrollToJadwal}
+                    style={{
+                      width: "100%",
+                      padding: "13px",
+                      background: "#186d22",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: 8,
+                      fontWeight: 600,
+                      fontSize: 14,
+                      cursor: "pointer",
+                      fontFamily: "'Plus Jakarta Sans',sans-serif",
+                      letterSpacing: "0.01em",
+                      transition: "opacity .15s",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.opacity = ".88")}
+                    onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+                  >
+                    Cek jadwal dan pesan sekarang
+                  </button>
                 </div>
-                <div style={{ padding:"16px 20px" }}>
-                <button
-                  onClick={handleScrollToJadwal}
-                  style={{
-                    width: "100%",
-                    padding: "14px",
-                    background: "#186d22",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: 12,
-                    fontWeight: 800,
-                    fontSize: 14,
-                    cursor: "pointer",
-                    fontFamily: "'Plus Jakarta Sans',sans-serif",
-                    boxShadow: "0 4px 16px rgba(22,163,74,.3)",
-                    transition: "all .2s",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = "translateY(-2px)";
-                    e.currentTarget.style.boxShadow = "0 8px 24px rgba(22,163,74,.4)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = "translateY(0)";
-                    e.currentTarget.style.boxShadow = "0 4px 16px rgba(22,163,74,.3)";
-                  }}
-                >
-                  Cek Jadwal dan Pesan Sekarang!
-                </button>
-                </div>
+
               </div>
             </div>
           </div>

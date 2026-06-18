@@ -7,10 +7,26 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
+# Dependencies
+node_modules/
+
+# Build
 dist
 dist-ssr
+
+# Environment
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+
+# Local files
 *.local
+
+# Database backup
+*.backup
+sportmatch.backup
 
 # Editor directories and files
 .vscode/*

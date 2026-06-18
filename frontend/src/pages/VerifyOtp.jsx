@@ -5,20 +5,40 @@ import { api } from "../services/api";
 export default function VerifyOtp() {
   const navigate = useNavigate();
   const location = useLocation();
-  const phone = location.state?.phone || "nomor WhatsApp terdaftar";
+
+  const email =
+    location.state?.email ||
+    "email terdaftar";
 
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const handleVerify = async () => {
     try {
       setLoading(true);
       setError("");
+      setSuccess("");
 
-      await api.post("/auth/verify-otp", { otp });
+      const { data } =
+        await api.post(
+          "/auth/verify-email-otp",
+          {
+            otp,
+          }
+        );
 
-      navigate("/login/user", { replace: true });
+      setSuccess(
+        data?.message ||
+          "Verifikasi berhasil"
+      );
+
+      setTimeout(() => {
+        navigate("/login/user", {
+          replace: true,
+        });
+      }, 1500);
     } catch (err) {
       setError(
         err.response?.data?.message ||
@@ -38,7 +58,8 @@ export default function VerifyOtp() {
         alignItems: "center",
         justifyContent: "center",
         background: "#f9fafb",
-        fontFamily: "'Plus Jakarta Sans', sans-serif",
+        fontFamily:
+          "'Plus Jakarta Sans', sans-serif",
         padding: 24,
       }}
     >
@@ -50,7 +71,8 @@ export default function VerifyOtp() {
           border: "1px solid #e5e7eb",
           borderRadius: 20,
           padding: 28,
-          boxShadow: "0 10px 30px rgba(0,0,0,0.06)",
+          boxShadow:
+            "0 10px 30px rgba(0,0,0,0.06)",
         }}
       >
         <h2
@@ -61,8 +83,9 @@ export default function VerifyOtp() {
             marginBottom: 8,
           }}
         >
-          Masukkan Kode OTP
+          Verifikasi Email
         </h2>
+
         <p
           style={{
             fontSize: 13.5,
@@ -71,14 +94,22 @@ export default function VerifyOtp() {
             lineHeight: 1.6,
           }}
         >
-          Kode sudah dikirim ke {phone}. Masukkan kode 6 digit di bawah ini.
+          Kode OTP telah dikirim ke:
+          <br />
+          <strong>{email}</strong>
         </p>
 
         <input
           type="text"
           value={otp}
-          onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-          placeholder="6 digit OTP"
+          onChange={(e) =>
+            setOtp(
+              e.target.value
+                .replace(/\D/g, "")
+                .slice(0, 6)
+            )
+          }
+          placeholder="Masukkan 6 digit OTP"
           maxLength={6}
           style={{
             width: "100%",
@@ -88,6 +119,8 @@ export default function VerifyOtp() {
             fontSize: 14,
             outline: "none",
             marginBottom: 14,
+            textAlign: "center",
+            letterSpacing: "4px",
           }}
         />
 
@@ -102,15 +135,38 @@ export default function VerifyOtp() {
             borderRadius: 12,
             padding: "12px 16px",
             fontWeight: 700,
-            cursor: loading ? "not-allowed" : "pointer",
+            cursor:
+              loading
+                ? "not-allowed"
+                : "pointer",
             opacity: loading ? 0.75 : 1,
           }}
         >
-          {loading ? "Memverifikasi..." : "Verifikasi OTP"}
+          {loading
+            ? "Memverifikasi..."
+            : "Verifikasi OTP"}
         </button>
 
+        {success && (
+          <p
+            style={{
+              marginTop: 12,
+              color: "#16a34a",
+              fontSize: 12.5,
+            }}
+          >
+            {success}
+          </p>
+        )}
+
         {error && (
-          <p style={{ marginTop: 12, color: "#dc2626", fontSize: 12.5 }}>
+          <p
+            style={{
+              marginTop: 12,
+              color: "#dc2626",
+              fontSize: 12.5,
+            }}
+          >
             {error}
           </p>
         )}

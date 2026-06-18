@@ -12,7 +12,10 @@ const sequelize = new Sequelize(
     logging: false,
 
     dialectOptions: {
-      useUTC: false,
+      ssl: {
+        require: true,
+        rejectUnauthorized: false,
+      },
     },
 
     timezone: "+08:00",

@@ -100,11 +100,6 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
-// DATABASE
-sequelize
-  .authenticate()
-  .then(() => console.log(" Database connected"))
-  .catch((err) => console.log(" DB error:", err));
 
 // MODEL
 const Lapangan = sequelize.define(
@@ -153,9 +148,10 @@ const User = sequelize.define(
 passport.use(
   new GoogleStrategy(
     {
-      clientID: "ISI_CLIENT_ID_KAMU",
-      clientSecret: "ISI_SECRET_KAMU",
-      callbackURL: "http://localhost:5000/api/v1/auth/google/callback",
+      clientID: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackURL:
+        `${process.env.SERVER_URL}/api/v1/auth/google/callback`,
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
@@ -292,7 +288,7 @@ app.get(
   "/api/v1/auth/google/callback",
   passport.authenticate("google", { failureRedirect: "/login" }),
   (req, res) => {
-    res.redirect("http://localhost:5173/lapangan");
+    res.redirect(`${process.env.CLIENT_URL}/lapangan`);
   }
 );
 
@@ -346,10 +342,18 @@ app.use("/api/v1/admin-invites", adminInviteRoutes);
 app.use("/api/v1/admin", adminRoutes);
 
 // START SERVER
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, async () => {
-  console.log(`🚀 Server jalan di http://localhost:${PORT}`);
-  await sequelize.sync();
-  await seedLapangan();
+  console.log(`🚀 Server jalan di port ${PORT}`);
+
+  try {
+    await sequelize.authenticate();
+
+    console.log("✅ Database connected");
+
+    await seedLapangan();
+  } catch (error) {
+    console.error("❌ Database error:", error);
+  }
 });
