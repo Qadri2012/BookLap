@@ -7,7 +7,7 @@ const { Op } = require("sequelize");
 const DetailPemesanan = require("../models/detailPemesanan");
 const User = require("../models/user");
 const Jadwal = require("../models/jadwal");
-const Lapangan = require("../models/Lapangan");
+const Lapangan = require("../models/lapangan");
 const DetailLayananPemesanan = require("../models/detailLayananPemesanan");
 const LayananTambahan = require("../models/layananTambahanModel");
 const {
