@@ -998,10 +998,10 @@ exports.register = async (req, res) => {
 
     await waitSessionSave(req);
 
-    await sendUserOtpEmail(
-      emailClean,
-      otp
-    );
+    // await sendUserOtpEmail(
+    //   emailClean,
+    //   otp
+    // );
 
     return res.status(201).json({
       message:
