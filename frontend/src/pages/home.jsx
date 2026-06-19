@@ -1125,25 +1125,24 @@ function detectLocation() {
     // borderBottomRightRadius: "50px", 
   }}
 >
-  <video
-    autoPlay
-    muted
-    loop
-    playsInline
-    style={{
-      position: "absolute",
-      inset: 0,
-      width: "100%",
-      height: "100%",
-      objectFit: "cover",
-      pointerEvents: "none",
-      filter: "brightness(0.92)",
-    //   borderBottomLeftRadius: "50px",   
-    // borderBottomRightRadius: "50px", 
-    }}
-  >
-    <source src="/video.mp4" type="video/mp4" />
-  </video>
+ <video
+  autoPlay
+  muted
+  loop
+  playsInline
+  style={{
+    position: "absolute",
+    inset: 0,
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+  }}
+>
+  <source
+    src="https://res.cloudinary.com/drdaiwuae/video/upload/q_auto/f_auto/v1781900074/video1_k4b52b.mp4"
+    type="video/mp4"
+  />
+</video>
 
   <div className="absolute inset-0 bg-gradient-to-r from-black/55 via-black/15 to-transparent pointer-events-none" />
 
