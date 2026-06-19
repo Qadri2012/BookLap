@@ -12,7 +12,7 @@ import { useAuth } from "../context/AuthContext";
 const SLIDE_IMGS = [img1, img2, img3, img4];
 
 // NEW: API base
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_BASE = import.meta.env.VITE_API_URL;
 
 const REGISTER_ADMIN_ENDPOINT = "/auth/register-admin";
 const REQUEST_ADMIN_LOGIN_OTP_ENDPOINT = "/auth/request-admin-login-otp";

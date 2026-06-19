@@ -11,7 +11,7 @@ import { useAuth } from "../context/AuthContext";
 const SLIDE_IMGS = [img1, img2, img3, img4];
 
 // ✅ DISEMPURNAKAN: pakai base URL dari env agar tidak hardcode terus-menerus
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_BASE = import.meta.env.VITE_API_URL;
 
 
 const authApi = axios.create({
