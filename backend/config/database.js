@@ -1,5 +1,16 @@
 const { Sequelize } = require("sequelize");
-require("dotenv").config();
+const path = require("path");
+
+// Load env sesuai environment
+require("dotenv").config({
+  path:
+    process.env.NODE_ENV === "production"
+      ? path.resolve(__dirname, "../.env.production")
+      : path.resolve(__dirname, "../.env"),
+});
+
+const isProduction =
+  process.env.NODE_ENV === "production";
 
 const sequelize = new Sequelize(
   process.env.DB_NAME,
@@ -11,12 +22,15 @@ const sequelize = new Sequelize(
     dialect: "postgres",
     logging: false,
 
-    dialectOptions: {
-      ssl: {
-        require: true,
-        rejectUnauthorized: false,
-      },
-    },
+    // SSL hanya untuk Render
+    dialectOptions: isProduction
+      ? {
+          ssl: {
+            require: true,
+            rejectUnauthorized: false,
+          },
+        }
+      : {},
 
     timezone: "+08:00",
   }
