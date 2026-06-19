@@ -2,10 +2,13 @@ const axios = require("axios");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/user");
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
 const AdminInvite = require("../models/adminInvite");
 const AdminMaster = require("../models/adminMaster");
 require("dotenv").config();
+const resend = new Resend(
+  process.env.RESEND_API_KEY
+);
 
 //blacklist refresh token sementara (untuk development / single instance)
 const blacklistedRefreshTokens = new Set();
@@ -19,34 +22,7 @@ const refreshCookieOptions = {
   path: "/",
 };
 
-// NEW: transporter email untuk OTP admin
-const mailTransporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
-console.log("SMTP USER:", process.env.SMTP_USER);
-console.log(
-  "SMTP PASS ADA:",
-  !!process.env.SMTP_PASS
-);
 
-mailTransporter.verify(
-  (error, success) => {
-    if (error) {
-      console.log(
-        "SMTP ERROR:",
-        error
-      );
-    } else {
-      console.log(
-        "SMTP READY"
-      );
-    }
-  }
-);
 function waitSessionSave(req) {
   return new Promise((resolve, reject) => {
     req.session.save((err) => {
@@ -267,52 +243,108 @@ function getOtpError(value = "") {
 }
 
 // NEW: kirim OTP ke email admin
-async function sendAdminOtpEmail(toEmail, otpCode) {
-  await mailTransporter.sendMail({
-    from: process.env.EMAIL_FROM || process.env.SMTP_USER,
-    to: toEmail,
-    subject: "OTP Verifikasi Admin BookLap",
-    html: `
-      <div style="font-family: Arial, sans-serif; line-height: 1.6;">
-        <h2>OTP Verifikasi Admin BookLap</h2>
-        <p>Kode OTP Anda adalah:</p>
-        <div style="font-size: 28px; font-weight: bold; letter-spacing: 4px;">
-          ${otpCode}
-        </div>
-        <p>Kode ini berlaku 10 menit.</p>
-      </div>
-    `,
-  });
+async function sendAdminOtpEmail(
+  toEmail,
+  otpCode
+) {
+  try {
+    const result =
+      await resend.emails.send({
+        from:
+          "BookLap <onboarding@resend.dev>",
+
+        to: toEmail,
+
+        subject:
+          "OTP Verifikasi Admin BookLap",
+
+        html: `
+          <div style="font-family:Arial">
+            <h2>
+              OTP Verifikasi Admin
+            </h2>
+
+            <div
+              style="
+                font-size:32px;
+                font-weight:bold;
+                letter-spacing:5px;
+              "
+            >
+              ${otpCode}
+            </div>
+
+            <p>
+              OTP berlaku selama
+              10 menit.
+            </p>
+          </div>
+        `,
+      });
+
+    console.log(
+      "EMAIL ADMIN TERKIRIM",
+      result
+    );
+  } catch (err) {
+    console.error(
+      "EMAIL ADMIN ERROR:",
+      err
+    );
+
+    throw err;
+  }
 }
 
-async function sendUserOtpEmail(toEmail, otpCode) {
+async function sendUserOtpEmail(
+  toEmail,
+  otpCode
+) {
   try {
-    await mailTransporter.sendMail({
-      from:
-        process.env.EMAIL_FROM ||
-        process.env.SMTP_USER,
+    const result =
+      await resend.emails.send({
+        from:
+          "BookLap <onboarding@resend.dev>",
 
-      to: toEmail,
+        to: toEmail,
 
-      subject: "Verifikasi Akun BookLap",
+        subject:
+          "Verifikasi Akun BookLap",
 
-      html: `
-        <div style="font-family:Arial">
-          <h2>Verifikasi Akun BookLap</h2>
-          <p>Kode OTP Anda:</p>
+        html: `
+          <div style="font-family:Arial">
+            <h2>Verifikasi Akun BookLap</h2>
 
-          <h1 style="letter-spacing:5px">
-            ${otpCode}
-          </h1>
+            <p>Kode OTP Anda:</p>
 
-          <p>Berlaku selama 10 menit.</p>
-        </div>
-      `,
-    });
+            <div
+              style="
+                font-size:32px;
+                font-weight:bold;
+                letter-spacing:5px;
+              "
+            >
+              ${otpCode}
+            </div>
 
-    console.log("EMAIL BERHASIL TERKIRIM");
+            <p>
+              OTP berlaku selama
+              10 menit.
+            </p>
+          </div>
+        `,
+      });
+
+    console.log(
+      "EMAIL USER TERKIRIM",
+      result
+    );
   } catch (err) {
-    console.error("EMAIL ERROR:", err);
+    console.error(
+      "EMAIL USER ERROR:",
+      err
+    );
+
     throw err;
   }
 }
