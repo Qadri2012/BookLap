@@ -280,74 +280,33 @@ async function sendAdminOtpEmail(toEmail, otpCode) {
   });
 }
 
-async function sendUserOtpEmail(
-  toEmail,
-  otpCode
-) {
+async function sendUserOtpEmail(toEmail, otpCode) {
   try {
-    console.log("EMAIL TUJUAN:", toEmail);
-    console.log("OTP YANG DIKIRIM:", otpCode);
+    // await mailTransporter.sendMail({
+    //   from:
+    //     process.env.EMAIL_FROM ||
+    //     process.env.SMTP_USER,
 
-    const info =
-      await mailTransporter.sendMail({
-        from:
-          process.env.EMAIL_FROM ||
-          process.env.SMTP_USER,
+    //   to: toEmail,
 
-        to: toEmail,
+    //   subject: "Verifikasi Akun BookLap",
 
-        subject:
-          "Verifikasi Akun BookLap",
+    //   html: `
+    //     <div style="font-family:Arial">
+    //       <h2>Verifikasi Akun BookLap</h2>
+    //       <p>Kode OTP Anda:</p>
+    //       <h1>${otpCode}</h1>
+    //       <p>Berlaku 10 menit.</p>
+    //     </div>
+    //   `,
+    // });
 
-        html: `
-          <h2>BookLap</h2>
-          <p>Kode OTP Anda:</p>
-          <h1>${otpCode}</h1>
-        `,
-      });
-
-    console.log(
-      "EMAIL BERHASIL TERKIRIM"
-    );
-
-    console.log(info);
+    console.log("EMAIL BERHASIL TERKIRIM");
   } catch (err) {
-    console.error(
-      "EMAIL GAGAL DIKIRIM"
-    );
+    console.error("EMAIL ERROR:", err);
 
-    console.error(err);
+    throw err;
   }
-
-
-  await mailTransporter.sendMail({
-    from:
-      process.env.EMAIL_FROM ||
-      process.env.SMTP_USER,
-
-    to: toEmail,
-
-    subject: "Verifikasi Akun BookLap",
-
-    html: `
-      <div style="font-family:Arial">
-        <h2>Verifikasi Akun BookLap</h2>
-
-        <p>Kode OTP Anda:</p>
-
-        <h1
-          style="
-            color:#16a34a;
-            letter-spacing:4px;
-          "
-        >
-          ${otpCode}
-        </h1>
-
-        <p>Berlaku 10 menit.</p>
-      </div>
-    `,
-  });
 }
 
 // NEW: cek kode undangan admin dari database
