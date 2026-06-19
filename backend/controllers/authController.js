@@ -287,29 +287,32 @@ async function sendAdminOtpEmail(toEmail, otpCode) {
 
 async function sendUserOtpEmail(toEmail, otpCode) {
   try {
-    // await mailTransporter.sendMail({
-    //   from:
-    //     process.env.EMAIL_FROM ||
-    //     process.env.SMTP_USER,
+    await mailTransporter.sendMail({
+      from:
+        process.env.EMAIL_FROM ||
+        process.env.SMTP_USER,
 
-    //   to: toEmail,
+      to: toEmail,
 
-    //   subject: "Verifikasi Akun BookLap",
+      subject: "Verifikasi Akun BookLap",
 
-    //   html: `
-    //     <div style="font-family:Arial">
-    //       <h2>Verifikasi Akun BookLap</h2>
-    //       <p>Kode OTP Anda:</p>
-    //       <h1>${otpCode}</h1>
-    //       <p>Berlaku 10 menit.</p>
-    //     </div>
-    //   `,
-    // });
+      html: `
+        <div style="font-family:Arial">
+          <h2>Verifikasi Akun BookLap</h2>
+          <p>Kode OTP Anda:</p>
+
+          <h1 style="letter-spacing:5px">
+            ${otpCode}
+          </h1>
+
+          <p>Berlaku selama 10 menit.</p>
+        </div>
+      `,
+    });
 
     console.log("EMAIL BERHASIL TERKIRIM");
   } catch (err) {
     console.error("EMAIL ERROR:", err);
-
     throw err;
   }
 }
@@ -962,10 +965,10 @@ exports.register = async (req, res) => {
 
     await waitSessionSave(req);
 
-    // await sendUserOtpEmail(
-    //   emailClean,
-    //   otp
-    // );
+    await sendUserOtpEmail(
+      emailClean,
+      otp
+    );
 
     return res.status(201).json({
       message:
