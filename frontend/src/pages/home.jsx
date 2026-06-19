@@ -4,7 +4,7 @@
 import { useState, useEffect, useRef } from "react";
 import Navbar from "../components/navbar";
 import { useNavigate, useLocation } from "react-router-dom";
-import { getLapangan } from "../services/api";
+
 import Footer from "../components/Footer";
 import gambar4 from "../assets/gambar4.png"; // ✅ NEW
 // ✅ NEW: icon untuk kartu fitur Home
@@ -15,7 +15,7 @@ import { FaBuilding, FaMapMarkerAlt, FaBolt } from "react-icons/fa";
 import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-
+import { getLapangan, searchLapanganTersedia,} from "../services/api";
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
 import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
@@ -84,11 +84,8 @@ const LOKASI_OPTIONS = [
   "Watang Soreang, Parepare",
 ];
 const OLAHRAGA_OPTIONS = [
-  "Galaxy Futsal Centre",
-  "Futsal Grand Sulawesi",
-  "Sansiro Futsal",
-  "Titik Kumpul Minisoccer",
-  "R57 Mini Soccer",
+  "Futsal",
+  "Mini Soccer",
 ];
 const JAM_OPTIONS = Array.from({ length: 24 }, (_, i) => {
   const h = String(i).padStart(2, "0");
@@ -98,7 +95,14 @@ const DAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 const MONTHS = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
 // const MAP_IFRAME_SRC = (lat, lng) =>
 //   `https://www.google.com/maps?q=${lat},${lng}&z=15&output=embed`;
+// ✅ Helper format tanggal lokal
+const formatTanggalLocal = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
 
+  return `${year}-${month}-${day}`;
+};
 
 // ── DROPDOWN ─────────────────────────────────────────────────────────────────
 function Dropdown({ label, options, value, onChange, icon }) {
@@ -966,6 +970,37 @@ const miniPhotos = [...new Set(
   const [userLocation, setUserLocation] = useState("");
   const [distanceText, setDistanceText] = useState("");
   const [userCoords, setUserCoords] = useState(null);
+const handleCariLapangan = async () => {
+  try {
+    if (!waktu?.date || !waktu?.jam) {
+      alert("Silakan pilih tanggal dan jam");
+      return;
+    }
+
+    if (!lokasi) {
+      alert("Silakan pilih lokasi");
+      return;
+    }
+
+    if (!olahraga) {
+      alert("Silakan pilih olahraga");
+      return;
+    }
+
+    navigate(
+      `/lapangan` +
+        `?tanggal=${encodeURIComponent(
+          formatTanggalLocal(waktu.date)
+        )}` +
+        `&jam=${encodeURIComponent(waktu.jam)}` +
+        `&lokasi=${encodeURIComponent(lokasi)}` +
+        `&lapangan=${encodeURIComponent(olahraga)}`
+    );
+
+  } catch (error) {
+    console.error(error);
+  }
+};
 
   useEffect(() => {
     const t = setInterval(() => setSlide((s) => (s + 1) % SLIDES.length), 4000);
@@ -1125,7 +1160,7 @@ function detectLocation() {
     // borderBottomRightRadius: "50px", 
   }}
 >
- <video
+  <video
   autoPlay
   muted
   loop
@@ -1202,13 +1237,7 @@ function detectLocation() {
             onChange={setOlahraga}
           />
           <button
-            onClick={() => {
-              navigate(
-                `/lapangan?lokasi=${encodeURIComponent(
-                  lokasi
-                )}&lapangan=${encodeURIComponent(olahraga)}`
-              );
-            }}
+            onClick={handleCariLapangan}
             className="mt-3 w-full bg-[#186d22] hover:bg-[#16601f] text-white font-bold py-3 rounded-xl transition-all"
           >
             Cari Lapangan Sekarang!
