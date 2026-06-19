@@ -34,6 +34,11 @@ const mailTransporter = nodemailer.createTransport({
     rejectUnauthorized: false,
   },
 });
+console.log("SMTP USER:", process.env.SMTP_USER);
+console.log(
+  "SMTP PASS ADA:",
+  !!process.env.SMTP_PASS
+);
 
 mailTransporter.verify(
   (error, success) => {
