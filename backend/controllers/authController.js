@@ -954,16 +954,16 @@ exports.register = async (req, res) => {
       });
     }
 
-    const captchaCheck =
-      await verifyRecaptcha(
-        captchaToken
-      );
+    // const captchaCheck =
+    //   await verifyRecaptcha(
+    //     captchaToken
+    //   );
 
-    if (!captchaCheck.ok) {
-      return res.status(400).json({
-        message: captchaCheck.message,
-      });
-    }
+    // if (!captchaCheck.ok) {
+    //   return res.status(400).json({
+    //     message: captchaCheck.message,
+    //   });
+    // }
 
     const existing =
       await User.findOne({
