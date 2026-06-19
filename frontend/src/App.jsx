@@ -30,6 +30,7 @@ import AdminLaporan from "./pages/admin/Laporan";
 import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
 import AdminApproval from "./pages/admin/AdminApproval";
 import Pengaturan from "./pages/admin/Pengaturan";
+import Kontak from "./pages/kontak";
 
 function App() {
   const location = useLocation();
@@ -62,6 +63,7 @@ function App() {
           
           <Route path="/verify-otp" element={<VerifyOtp />} />
           <Route path="/tentangkami" element={<TentangKami />} />
+          <Route path="/kontak" element={<Kontak />} />
           <Route path="/lapangan" element={<Lapangan />} />
           <Route path="/lapangan/:id" element={<DetailLapangan />} />
           <Route path="/riwayat" element={<Riwayat />} />

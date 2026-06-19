@@ -3,6 +3,158 @@ const { Lapangan, Review } = require("../models");
 const Jadwal = require("../models/jadwal");
 const { Op } = require("sequelize");
 
+exports.searchLapangan = async (req, res) => {
+  try {
+    const {
+      lokasi,
+      tipe,
+      tanggal,
+      jam,
+    } = req.query;
+
+    const kataLokasi = lokasi
+      .split(",")
+      .map((x) => x.trim())
+      .filter(Boolean);
+
+    const lapangan =
+      await Lapangan.findAll({
+        where: {
+          tipe: String(tipe)
+            .toLowerCase()
+            .replace(/\s/g, ""),
+
+          [Op.and]: kataLokasi.map((kata) => ({
+            alamat: {
+              [Op.iLike]: `%${kata}%`,
+            },
+          })),
+        },
+      });
+
+    const result = await Promise.all(
+      lapangan.map(async (lap) => {
+
+        const jadwal =
+          await Jadwal.findAll({
+            where: {
+              lapangan_id: lap.id,
+              tanggal,
+              jam_mulai: jam,
+              status: "tersedia",
+            },
+          });
+
+        return {
+          ...lap.toJSON(),
+
+          tersedia:
+            jadwal.length > 0,
+
+          courts_tersedia:
+            jadwal.map(
+              (j) =>
+                `Lapangan ${j.court_no}`
+            ),
+        };
+      })
+    );
+
+    return res.json(result);
+
+  } catch (err) {
+
+    console.error(err);
+
+    return res.status(500).json({
+      message: "Gagal mencari lapangan",
+    });
+
+  }
+};
+exports.searchAvailableLapangan =
+  async (req, res) => {
+    try {
+      const {
+        tanggal,
+        jam,
+        lokasi,
+        tipe,
+      } = req.query;
+
+      if (
+        !tanggal ||
+        !jam ||
+        !lokasi ||
+        !tipe
+      ) {
+        return res.status(400).json({
+          message:
+            "tanggal, jam, lokasi dan tipe wajib diisi",
+        });
+      }
+
+      const jadwalTersedia =
+        await Jadwal.findAll({
+          where: {
+            tanggal,
+            jam_mulai: jam,
+            status: "tersedia",
+          },
+        });
+
+      if (
+        jadwalTersedia.length === 0
+      ) {
+        return res.json([]);
+      }
+
+      const lapanganIds =
+        [
+          ...new Set(
+            jadwalTersedia.map(
+              (j) => j.lapangan_id
+            )
+          ),
+        ];
+
+      const kataLokasi = lokasi
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+    const lapangan =
+      await Lapangan.findAll({
+        where: {
+          id: lapanganIds,
+
+          tipe: String(tipe)
+            .toLowerCase()
+            .replace(/\s/g, ""),
+
+          [Op.and]: kataLokasi.map((kata) => ({
+            alamat: {
+              [Op.iLike]: `%${kata}%`,
+            },
+          })),
+        },
+      });
+
+      return res.json(
+        lapangan
+      );
+
+    } catch (error) {
+
+      console.error(error);
+
+      return res.status(500).json({
+        message:
+          "Gagal mencari lapangan",
+      });
+    }
+  };
+
 // ✅ NEW: ambil semua lapangan
 exports.getAll = async (req, res) => {
   try {

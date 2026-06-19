@@ -3,7 +3,8 @@ const router = require("express").Router();
 const ctrl = require("../../controllers/lapanganController");
 const auth = require("../../middleware/authmiddleware");
 const authorizeRole = require("../../middleware/roleMiddleware");
-
+router.get("/search/available", ctrl.searchAvailableLapangan);
+router.get("/search", ctrl.searchLapangan);
 // PUBLIC
 router.get("/", ctrl.getAll);
 router.get("/:id", ctrl.getById);
