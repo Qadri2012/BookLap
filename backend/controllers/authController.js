@@ -9,6 +9,8 @@ require("dotenv").config();
 const resend = new Resend(
   process.env.RESEND_API_KEY
 );
+const { sendWelcomeEmail } =
+require("../services/welcomeEmail");
 
 //blacklist refresh token sementara (untuk development / single instance)
 const blacklistedRefreshTokens = new Set();
@@ -251,7 +253,7 @@ async function sendAdminOtpEmail(
     const result =
       await resend.emails.send({
         from:
-          "BookLap <onboarding@resend.dev>",
+          "SportMatch <sportmatch@booklapajatappareng.my.id>",
 
         to: toEmail,
 
@@ -303,8 +305,8 @@ async function sendUserOtpEmail(
   try {
     const result =
       await resend.emails.send({
-        from:
-          "BookLap <onboarding@resend.dev>",
+        from:     
+          "SportMatch <sportmatch@booklapajatappareng.my.id>",
 
         to: toEmail,
 
@@ -890,6 +892,16 @@ exports.verifyEmailOtp =
           status:
             "active",
         });
+        try {
+          await sendWelcomeEmail(user);
+        } catch (err) {
+          console.error(
+            "WELCOME EMAIL ERROR:",
+            err
+          );
+        }
+
+      
 
       req.session.pendingRegister =
         null;
