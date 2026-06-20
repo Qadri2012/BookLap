@@ -20,7 +20,7 @@ dist-ssr
 .env.development
 .env.production
 .env.test
-
+testEmail.js
 # Local files
 *.local
 
