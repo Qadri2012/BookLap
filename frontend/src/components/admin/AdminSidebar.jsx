@@ -30,7 +30,11 @@ const navItems = [
   { to: "/admin/pembayaran", label: "Pembayaran", icon: CreditCard },
   { to: "/admin/user", label: "Manajemen User", icon: Users },
   { to: "/admin/chat", label: "Chat Customer", icon: MessageCircle },
-  { to: "/admin/review", label: "Review & Feedback", icon: MessageSquare },
+ {
+  to: "/admin/review-feedback",
+  label: "Review & Feedback",
+  icon: MessageSquare
+},
   { to: "/admin/layanan", label: "Layanan Tambahan", icon: Briefcase },
   { to: "/admin/approval-admin", label: "Approval Admin", icon: ShieldCheck },
   { to: "/admin/laporan", label: "Laporan", icon: FileText },

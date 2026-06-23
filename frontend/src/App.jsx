@@ -34,6 +34,7 @@ import Kontak from "./pages/kontak";
 import ScrollToTop from "./components/ScrollToTop";
 import TestSupabase from "./pages/TestSupabase";
 import AdminChat from "./pages/admin/AdminChat";
+import ReviewFeedback from "./pages/admin/ReviewFeedback";
 
 function App() {
   const location = useLocation();
@@ -124,6 +125,10 @@ function App() {
           <Route path="user" element={<AdminUser />} />
           <Route path="laporan" element={<AdminLaporan />} />
           <Route path="chat" element={<AdminChat />} />
+          <Route
+  path="review-feedback"
+  element={<ReviewFeedback />}
+/>
         </Route>
         
         </Routes>

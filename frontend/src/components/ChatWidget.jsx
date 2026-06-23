@@ -1,3 +1,4 @@
+import axios from "axios";
 import { useEffect, useRef, useState } from "react";
 import EmojiPicker from "emoji-picker-react";
 import {
@@ -57,18 +58,8 @@ const LAPORAN_TABS = [
   },
   {
     id: "keluhan",
-    label: "Keluhan Pengguna",
+    label: "Keluhan & Pengaduan",
     icon: <FaThumbsUp />,
-  },
-  {
-    id: "riwayat",
-    label: "Riwayat Booking",
-    icon: <FaHistory />,
-  },
-  {
-    id: "pengaduan",
-    label: "Form Pengaduan",
-    icon: <FaFileAlt />,
   },
   {
     id: "rating",
@@ -77,24 +68,7 @@ const LAPORAN_TABS = [
   },
 ];
 
-const DUMMY_BOOKINGS = [
-  {
-    id: "BK-2024",
-    lapangan: "Futsal A",
-    tanggal: "20 Jun 2026",
-    jam: "08:00 - 09:00",
-    status: "selesai",
-    harga: "Rp 120.000",
-  },
-  {
-    id: "BK-2023",
-    lapangan: "Mini Soccer",
-    tanggal: "18 Jun 2026",
-    jam: "16:00 - 17:00",
-    status: "selesai",
-    harga: "Rp 150.000",
-  },
-];
+
 // ─────────────────────────────────────────
 // Sub-components
 // ─────────────────────────────────────────
@@ -202,20 +176,103 @@ function LaporanModal({ onClose, user }) {
 
   // Form states
   const [masalahForm, setMasalahForm] = useState({ judul: "", kategori: "", deskripsi: "" });
-  const [keluhanForm, setKeluhanForm] = useState({ nama: "", email: "", pesan: "" });
-  const [pengaduanForm, setPengaduanForm] = useState({ nama: "", nohp: "", kronologi: "", harapan: "" });
+  const [keluhanForm, setKeluhanForm] = useState({
+  nama: "",
+  email: "",
+  nohp: "",
+  pesan: "",
+  harapan: "",
+});
+
   const [ratingForm, setRatingForm] = useState({ rating: 0, nama: "", ulasan: "" });
 
   const [submitted, setSubmitted] = useState(null); // which tab was submitted
   const [loading, setLoading] = useState(false);
+  const [hasReviewed, setHasReviewed] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  useEffect(() => {
+  if (user?.id) {
+    checkReviewStatus();
+  }
+}, [user]);
 
-  const handleSubmit = async (tab) => {
+const handleSubmit = async (tab) => {
+  try {
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 1000));
-    setLoading(false);
+
+    // ===================================
+    // WEBSITE REVIEW
+    // ===================================
+    if (tab === "rating") {
+
+      if (hasReviewed) {
+        alert(
+          "Anda sudah pernah memberikan ulasan untuk BookLap."
+        );
+        return;
+      }
+
+      await axios.post(
+        "http://localhost:5000/api/v1/website-review",
+        {
+          user_id: user.id,
+          nama:
+            ratingForm.nama ||
+            user?.nama ||
+            "Pengguna BookLap",
+
+          rating: ratingForm.rating,
+          ulasan: ratingForm.ulasan,
+        }
+      );
+
+      setHasReviewed(true);
+
+      setSuccessMessage(
+        "✅ Ulasan Anda berhasil dikirim. Terima kasih atas masukan Anda."
+      );
+    }
+
     setSubmitted(tab);
-    setTimeout(() => setSubmitted(null), 3000);
-  };
+
+    setTimeout(() => {
+      setSubmitted(null);
+    }, 3000);
+
+    // reset form
+    if (tab === "rating") {
+      setRatingForm({
+        rating: 0,
+        nama: "",
+        ulasan: "",
+      });
+    }
+
+  } catch (error) {
+    console.error(error);
+
+    alert(
+      error?.response?.data?.message ||
+      "Gagal mengirim ulasan"
+    );
+  } finally {
+    setLoading(false);
+  }
+};
+
+const checkReviewStatus = async () => {
+  if (!user?.id) return;
+
+  try {
+    const res = await axios.get(
+      `http://localhost:5000/api/v1/website-review/check/${user.id}`
+    );
+
+    setHasReviewed(res.data.hasReview);
+  } catch (error) {
+    console.error(error);
+  }
+};
 
   const inputStyle = {
     width: "100%", padding: "12px 16px", borderRadius: 12,
@@ -272,57 +329,148 @@ function LaporanModal({ onClose, user }) {
         );
 
       // ── Tab 2: Keluhan ──
-      case "keluhan":
-        return (
-          <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-            {submitted === "keluhan" && <SuccessBanner />}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-              <div>
-                <label style={labelStyle}>Nama Lengkap</label>
-                <input style={inputStyle} placeholder="Nama kamu" value={keluhanForm.nama} onChange={(e) => setKeluhanForm({ ...keluhanForm, nama: e.target.value })} />
-              </div>
-              <div>
-                <label style={labelStyle}>Email</label>
-                <input style={inputStyle} type="email" placeholder="email@kamu.com" value={keluhanForm.email} onChange={(e) => setKeluhanForm({ ...keluhanForm, email: e.target.value })} />
-              </div>
-            </div>
-            <div>
-              <label style={labelStyle}>Keluhan</label>
-              <textarea style={{ ...inputStyle, minHeight: 140, resize: "vertical" }} placeholder="Ceritakan keluhan kamu tentang layanan BookLap..." value={keluhanForm.pesan} onChange={(e) => setKeluhanForm({ ...keluhanForm, pesan: e.target.value })} />
-            </div>
-            <button onClick={() => handleSubmit("keluhan")} disabled={loading || !keluhanForm.nama || !keluhanForm.pesan} style={submitBtn(loading || !keluhanForm.nama || !keluhanForm.pesan)}>
-              {loading ? "Mengirim..." : <><FaPaperPlane /> Kirim Keluhan</>}
-            </button>
-          </div>
-        );
+case "keluhan":
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+      {submitted === "keluhan" && <SuccessBanner />}
 
-      // ── Tab 3: Riwayat Booking ──
-      case "riwayat":
-        return (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <div style={{ fontSize: 13, color: "#64748b", marginBottom: 4 }}>Menampilkan riwayat pemesanan terbaru kamu.</div>
-            {DUMMY_BOOKINGS.map((b) => (
-              <div key={b.id} style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 16 }}>
-                <div style={{ width: 48, height: 48, borderRadius: 12, background: b.status === "selesai" ? "#dcfce7" : "#fee2e2", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <FaCalendarCheck size={20} color={b.status === "selesai" ? "#16a34a" : "#dc2626"} />
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: "#111827" }}>{b.lapangan}</div>
-                  <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{b.tanggal} • {b.jam}</div>
-                </div>
-                <div style={{ textAlign: "right", flexShrink: 0 }}>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: "#111827" }}>{b.harga}</div>
-                  <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 999, background: b.status === "selesai" ? "#dcfce7" : "#fee2e2", color: b.status === "selesai" ? "#15803d" : "#dc2626" }}>
-                    {b.status === "selesai" ? "Selesai" : "Dibatalkan"}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        );
+      <div
+        style={{
+          background: "#fffbeb",
+          border: "1px solid #fde68a",
+          borderRadius: 12,
+          padding: "12px 16px",
+          fontSize: 13,
+          color: "#92400e",
+        }}
+      >
+        Gunakan form ini untuk menyampaikan keluhan layanan,
+        kritik, saran, maupun pengaduan resmi kepada BookLap.
+      </div>
 
-      // ── Tab 4: Form Pengaduan ──
-      case "pengaduan":
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: 16,
+        }}
+      >
+        <div>
+          <label style={labelStyle}>Nama Lengkap</label>
+          <input
+            style={inputStyle}
+            placeholder="Nama lengkap"
+            value={keluhanForm.nama}
+            onChange={(e) =>
+              setKeluhanForm({
+                ...keluhanForm,
+                nama: e.target.value,
+              })
+            }
+          />
+        </div>
+
+        <div>
+          <label style={labelStyle}>Email</label>
+          <input
+            style={inputStyle}
+            type="email"
+            placeholder="email@kamu.com"
+            value={keluhanForm.email}
+            onChange={(e) =>
+              setKeluhanForm({
+                ...keluhanForm,
+                email: e.target.value,
+              })
+            }
+          />
+        </div>
+      </div>
+
+      <div>
+        <label style={labelStyle}>Nomor HP</label>
+        <input
+          style={inputStyle}
+          placeholder="08xx-xxxx-xxxx"
+          value={keluhanForm.nohp}
+          onChange={(e) =>
+            setKeluhanForm({
+              ...keluhanForm,
+              nohp: e.target.value,
+            })
+          }
+        />
+      </div>
+
+      <div>
+        <label style={labelStyle}>
+          Keluhan / Pengaduan
+        </label>
+        <textarea
+          style={{
+            ...inputStyle,
+            minHeight: 140,
+            resize: "vertical",
+          }}
+          placeholder="Jelaskan keluhan, kritik, saran, atau pengaduan secara detail..."
+          value={keluhanForm.pesan}
+          onChange={(e) =>
+            setKeluhanForm({
+              ...keluhanForm,
+              pesan: e.target.value,
+            })
+          }
+        />
+      </div>
+
+      <div>
+        <label style={labelStyle}>
+          Harapan Penyelesaian (Opsional)
+        </label>
+        <textarea
+          style={{
+            ...inputStyle,
+            minHeight: 100,
+            resize: "vertical",
+          }}
+          placeholder="Apa yang Anda harapkan dari BookLap?"
+          value={keluhanForm.harapan}
+          onChange={(e) =>
+            setKeluhanForm({
+              ...keluhanForm,
+              harapan: e.target.value,
+            })
+          }
+        />
+      </div>
+
+      <button
+        onClick={() => handleSubmit("keluhan")}
+        disabled={
+          loading ||
+          !keluhanForm.nama ||
+          !keluhanForm.pesan
+        }
+        style={submitBtn(
+          loading ||
+          !keluhanForm.nama ||
+          !keluhanForm.pesan
+        )}
+      >
+        {loading ? (
+          "Mengirim..."
+        ) : (
+          <>
+            <FaPaperPlane />
+            Kirim Keluhan & Pengaduan
+          </>
+        )}
+      </button>
+    </div>
+  );
+
+
+
         return (
           <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
             {submitted === "pengaduan" && <SuccessBanner />}
@@ -357,7 +505,21 @@ function LaporanModal({ onClose, user }) {
       case "rating":
         return (
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-            {submitted === "rating" && <SuccessBanner />}
+            {successMessage && (
+              <div
+                style={{
+                  background: "#dcfce7",
+                  border: "1px solid #22c55e",
+                  color: "#166534",
+                  padding: "14px",
+                  borderRadius: "12px",
+                  fontWeight: "600",
+                  marginBottom: "15px",
+                }}
+              >
+                {successMessage}
+              </div>
+            )}
 
             {/* Rating input */}
             <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 20, padding: 28, textAlign: "center" }}>
@@ -379,35 +541,38 @@ function LaporanModal({ onClose, user }) {
               <label style={labelStyle}>Ulasan</label>
               <textarea style={{ ...inputStyle, minHeight: 120, resize: "vertical" }} placeholder="Ceritakan pengalaman kamu menggunakan website BookLap — apa yang kamu suka atau ingin diperbaiki?" value={ratingForm.ulasan} onChange={(e) => setRatingForm({ ...ratingForm, ulasan: e.target.value })} />
             </div>
-            <button onClick={() => handleSubmit("rating")} disabled={loading || !ratingForm.rating || !ratingForm.ulasan} style={submitBtn(loading || !ratingForm.rating || !ratingForm.ulasan)}>
+            {hasReviewed && (
+              <div
+                style={{
+                  background: "#fef3c7",
+                  border: "1px solid #f59e0b",
+                  color: "#92400e",
+                  padding: "12px",
+                  borderRadius: "12px",
+                  fontSize: "14px",
+                  fontWeight: "600",
+                }}
+              >
+                Anda sudah pernah memberikan ulasan untuk BookLap.
+                Setiap akun hanya diperbolehkan memberikan 1 ulasan.
+              </div>
+            )}
+            <button onClick={() => handleSubmit("rating")} disabled={
+            loading ||
+            hasReviewed ||
+            !ratingForm.rating ||
+            !ratingForm.ulasan
+            }style={submitBtn(
+            loading ||
+            hasReviewed ||
+            !ratingForm.rating ||
+            !ratingForm.ulasan
+            )}>
               {loading ? "Mengirim..." : <><FaStar /> Kirim Ulasan</>}
             </button>
 
             {/* Recent reviews */}
-            <div style={{ marginTop: 8 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: "#374151", marginBottom: 12 }}>Ulasan Terbaru</div>
-              {[
-                { nama: "Rizky A.", rating: 5, ulasan: "Website-nya sangat mudah digunakan, proses booking cepat dan responsif!", waktu: "2 hari lalu" },
-                { nama: "Dewi S.", rating: 4, ulasan: "Tampilan bagus dan informatif. Semoga fitur notifikasi bisa ditambah.", waktu: "5 hari lalu" },
-                { nama: "Andi P.", rating: 5, ulasan: "Booking lapangan jadi lebih gampang. Mantap!", waktu: "1 minggu lalu" },
-              ].map((r, i) => (
-                <div key={i} style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 14, padding: "14px 18px", marginBottom: 10 }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#4a7c59", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: "#fff" }}>
-                        {r.nama[0]}
-                      </div>
-                      <span style={{ fontWeight: 600, fontSize: 13, color: "#111827" }}>{r.nama}</span>
-                    </div>
-                    <span style={{ fontSize: 11, color: "#94a3b8" }}>{r.waktu}</span>
-                  </div>
-                  <div style={{ display: "flex", gap: 2, marginBottom: 6 }}>
-                    {[1,2,3,4,5].map((s) => <FaStar key={s} size={12} color={s <= r.rating ? "#f59e0b" : "#e2e8f0"} />)}
-                  </div>
-                  <p style={{ margin: 0, fontSize: 13, color: "#374151", lineHeight: 1.6 }}>{r.ulasan}</p>
-                </div>
-              ))}
-            </div>
+
           </div>
         );
 
@@ -498,6 +663,23 @@ function StarRating({ value, onChange, size = 32 }) {
     </div>
   );
 }
+const submitBtn = (disabled) => ({
+  height: 52,
+  border: "none",
+  borderRadius: 14,
+  background: disabled
+    ? "#cbd5e1"
+    : "linear-gradient(135deg,#ef4444,#dc2626)",
+  color: "#fff",
+  fontSize: 15,
+  fontWeight: 700,
+  cursor: disabled ? "not-allowed" : "pointer",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 8,
+  opacity: disabled ? 0.7 : 1,
+});
 
 // ─────────────────────────────────────────
 // Main Component
@@ -1053,7 +1235,13 @@ export default function ChatWidget() {
       `}</style>
     </div>
   );
-<style>{`
+
+  // ─────────────────────────────────────────
+  // Root render
+  // ─────────────────────────────────────────
+  return (
+    <>
+    <style>{`
 .arrows {
   display:flex;
   align-items:center;
@@ -1074,11 +1262,6 @@ export default function ChatWidget() {
   100% { transform: translateX(0px); }
 }
 `}</style>
-  // ─────────────────────────────────────────
-  // Root render
-  // ─────────────────────────────────────────
-  return (
-    <>
       {/* Radial menu items */}
       {renderRadialMenu()}
 
@@ -1087,7 +1270,7 @@ export default function ChatWidget() {
   <div style={{ background: "#fff", color: "#111827", padding: "8px 16px", borderRadius: 999, fontWeight: 700, fontSize: 13, boxShadow: "0 8px 24px rgba(0,0,0,0.25)", whiteSpace: "nowrap" }}>
     Klik Disini
   </div>
-  <div style={{ display: "flex", alignItems: "center", overflow: "hidden", width: 10 }}>
+  <div style={{ display: "flex", alignItems: "center", overflow: "hidden", width: 90 }}>
     <div className="arrows">
       <div className="chevron" />
       <div className="chevron" />

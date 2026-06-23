@@ -10,6 +10,7 @@ const rateLimit = require("express-rate-limit");
 const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const session = require("express-session");
+const websiteReviewRoutes = require("./routes/v1/websiteReview");
 
 // versioned routes v1
 const authRoutes = require("./routes/v1/auth");
@@ -365,6 +366,10 @@ app.use("/api/v1/metode-pembayaran", metodePembayaranRoutes);
 app.use("/api/v1/metode-transfer", metodeTransferRoutes);
 app.use("/api/v1/pemesanan", pemesananRoutes);
 app.use("/api/v1/review", reviewRoutes);
+app.use(
+  "/api/v1/website-review",
+  websiteReviewRoutes
+);
 app.use("/api/v1/admin-invites", adminInviteRoutes);
 app.use("/api/v1/admin", adminRoutes);
 

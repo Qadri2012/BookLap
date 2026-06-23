@@ -2,6 +2,7 @@
 // home
 
 import { useState, useEffect, useRef } from "react";
+import axios from "axios";
 import Navbar from "../components/navbar";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -886,6 +887,7 @@ export default function Home() {
   const navigate = useNavigate();
   // ── GANTI useEffect fetch data ────────────────────────────────────────
 const [dataLapangan, setDataLapangan] = useState([]);
+const [testimonials, setTestimonials] = useState([]);
 const [loadingLapangan, setLoadingLapangan] = useState(true);
 // Tambah di dalam Home() setelah state lainnya
 const [mounted, setMounted] = useState(false);
@@ -931,6 +933,26 @@ useEffect(() => {
 
   fetchData();
 }, []);
+
+useEffect(() => {
+  const fetchTestimonials = async () => {
+    try {
+      const res = await axios.get(
+        "http://localhost:5000/api/v1/website-review/homepage"
+      );
+
+      setTestimonials(res.data);
+    } catch (error) {
+      console.error(
+        "Gagal mengambil testimoni",
+        error
+      );
+    }
+  };
+
+  fetchTestimonials();
+}, []);
+
   const mapPoints = dataLapangan.filter(
   (f) =>
     Number.isFinite(Number(f.latitude)) &&
@@ -2212,48 +2234,25 @@ function detectLocation() {
     {/* AUTO-SCROLL TRACK — overflow hidden di wrapper */}
     <div style={{ overflow: "hidden", paddingBottom: "16px", marginTop: "-40px" }}>
       <div className="testimoni-track">
+      {testimonials.length === 0 && (
+        <div
+          style={{
+            width: "100%",
+            textAlign: "center",
+            color: "#fff",
+            fontSize: "16px",
+            fontWeight: "600",
+            padding: "40px",
+          }}
+        >
+          Belum ada testimoni pengguna.
+        </div>
+      )}
+
         {/* Render 2x untuk efek loop tanpa putus */}
-        {[...Array(2)].map((_, dupIdx) =>
-          [
-            {
-              nama: "Rizky Pratama",
-              role: "Pemain Futsal",
-              rating: 5,
-              komen: "Booking lapangan sekarang jauh lebih cepat. Tinggal pilih jadwal lalu langsung pesan tanpa ribet chat manual.",
-            },
-            {
-              nama: "Fahri Ramadhan",
-              role: "Kapten Tim Mini Soccer",
-              rating: 5,
-              komen: "Pilihan lapangannya lengkap dan tampilannya nyaman dipakai. Sangat membantu saat mencari jadwal kosong.",
-            },
-            {
-              nama: "Dimas Saputra",
-              role: "Pengguna BookLap",
-              rating: 5,
-              komen: "Saya suka karena harga lapangan transparan dan lokasi lapangan langsung terlihat di maps.",
-            },
-            {
-              nama: "Andi Wijaya",
-              role: "Pemain Futsal",
-              rating: 5,
-              komen: "Aplikasinya simpel dan tidak ribet. Bisa booking dalam 2 menit dari mana saja — benar-benar praktis!",
-            },
-            {
-              nama: "Budi Santoso",
-              role: "Pengelola Tim",
-              rating: 4,
-              komen: "Fitur cek jadwal langsung dari web sangat membantu tim kami mengatur latihan rutin setiap minggu.",
-            },
-            {
-              nama: "Siti Rahma",
-              role: "Pengguna BookLap",
-              rating: 5,
-              komen: "Tidak perlu lagi telepon lapangan untuk cek ketersediaan. Semua info ada di satu tempat, keren banget!",
-            },
-          ].map((item, i) => (
+        {testimonials.map((item, i) => (
             <div
-              key={`${dupIdx}-${i}`}
+              key={item._id || i}
               className="testi-card"
               style={{
                 flexShrink: 0,
@@ -2287,7 +2286,7 @@ function detectLocation() {
                 marginBottom: "24px",
                 fontFamily: "'Plus Jakarta Sans', sans-serif",
               }}>
-                {item.komen}
+                {item.ulasan}
               </p>
 
               {/* Divider */}
@@ -2311,13 +2310,13 @@ function detectLocation() {
                     {item.nama}
                   </h4>
                   <p style={{ color:"#6b7280", fontSize:"12px" }}>
-                    {item.role}
+                    Pengguna BookLap
                   </p>
                 </div>
               </div>
             </div>
-          ))
-        )}
+          ))}
+     
       </div>
     </div>
 
