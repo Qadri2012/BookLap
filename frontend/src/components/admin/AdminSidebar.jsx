@@ -1,3 +1,5 @@
+// components/admin/AdminSidebar.jsx
+
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
@@ -10,6 +12,7 @@ import {
   CreditCard,
   Users,
   MessageSquare,
+  MessageCircle,
   Briefcase,
   ShieldCheck,
   FileText,
@@ -26,6 +29,7 @@ const navItems = [
   { to: "/admin/booking", label: "Booking", icon: BookOpen },
   { to: "/admin/pembayaran", label: "Pembayaran", icon: CreditCard },
   { to: "/admin/user", label: "Manajemen User", icon: Users },
+  { to: "/admin/chat", label: "Chat Customer", icon: MessageCircle },
   { to: "/admin/review", label: "Review & Feedback", icon: MessageSquare },
   { to: "/admin/layanan", label: "Layanan Tambahan", icon: Briefcase },
   { to: "/admin/approval-admin", label: "Approval Admin", icon: ShieldCheck },

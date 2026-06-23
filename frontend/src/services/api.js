@@ -120,11 +120,41 @@ function parseLapangan(d) {
   };
 }
 
+
 // LAPANGAN
 export const getLapangan = async (params = {}) => {
   const query = new URLSearchParams(params).toString();
-  const res = await api.get(`/lapangan${query ? `?${query}` : ""}`);
-  return Array.isArray(res.data) ? res.data.map(parseLapangan) : [];
+
+  const res = await api.get(
+    `/lapangan${query ? `?${query}` : ""}`
+  );
+
+  return Array.isArray(res.data)
+    ? res.data.map(parseLapangan)
+    : [];
+};
+
+export const searchLapanganTersedia = async ({
+  tanggal,
+  jam,
+  lokasi,
+  tipe,
+}) => {
+  const res = await api.get(
+    "/lapangan/search/available",
+    {
+      params: {
+        tanggal,
+        jam,
+        lokasi,
+        tipe,
+      },
+    }
+  );
+
+  return Array.isArray(res.data)
+    ? res.data.map(parseLapangan)
+    : [];
 };
 export const getLapanganById = async (id) => {
   const res = await api.get(`/lapangan/${id}`);

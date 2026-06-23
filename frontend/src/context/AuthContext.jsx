@@ -65,53 +65,63 @@ export function AuthProvider({ children }) {
   // ─────────────────────────────────────────────
   // BOOTSTRAP AUTH
   // ─────────────────────────────────────────────
-  useEffect(() => {
-    const bootstrapAuth = async () => {
-      try {
-        const token = localStorage.getItem("token");
+useEffect(() => {
+  const bootstrapAuth = async () => {
+    try {
 
-        // ✅ kalau tidak ada access token,
-        // coba refresh via cookie
-        if (!token) {
-          try {
-            const refreshRes = await refreshAuth();
+      const savedUser =
+        localStorage.getItem("user");
 
-            const newAccessToken =
-              refreshRes.accessToken || refreshRes.token;
+      const token =
+        localStorage.getItem("token");
 
-            if (newAccessToken) {
-              setToken(newAccessToken);
-            }
-          } catch {
-            setLoading(false);
-            return;
-          }
-        }
-
-        // ✅ verify user
-        const res = await apiClient.get("/auth/verify");
-
-        const verifiedUser = res.data?.user;
-
-        if (verifiedUser) {
-          setUser(verifiedUser);
-
-          localStorage.setItem(
-            "user",
-            JSON.stringify(verifiedUser)
-          );
-        } else {
-          logout(false);
-        }
-      } catch {
-        logout(false);
-      } finally {
+      if (!savedUser || !token) {
         setLoading(false);
+        return;
       }
-    };
 
-    bootstrapAuth();
-  }, [logout]);
+      setUser(JSON.parse(savedUser));
+
+      const res =
+        await apiClient.get(
+          "/auth/verify"
+        );
+
+      if (res.data?.user) {
+
+        setUser(
+          res.data.user
+        );
+
+        localStorage.setItem(
+          "user",
+          JSON.stringify(
+            res.data.user
+          )
+        );
+
+      } else {
+        logout(false);
+      }
+
+    } catch (error) {
+
+      console.log(
+        "VERIFY ERROR:",
+        error
+      );
+
+      logout(false);
+
+    } finally {
+
+      setLoading(false);
+
+    }
+  };
+
+  bootstrapAuth();
+}, [logout]);
 
   return (
     <AuthContext.Provider

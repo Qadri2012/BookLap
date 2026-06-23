@@ -3,7 +3,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import Navbar from "../components/navbar";
 import { useNavigate, useLocation } from "react-router-dom";
-import { getLapangan } from "../services/api";
+import {
+  getLapangan,
+  searchLapanganTersedia,
+} from "../services/api";
 import Footer from "../components/Footer";
 
 
@@ -188,6 +191,19 @@ function LapanganCard({ field, delay = 0, onBook }) {
           <span className="text-gray-300">·</span>
           <span>{field.reviews} ulasan</span>
         </div>
+        {field.tanggal_pencarian && field.jam_pencarian && (
+  <div className="mb-4">
+    <div className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-green-50 border border-green-200">
+      <span className="text-green-600 font-bold">
+        ✓
+      </span>
+
+      <span className="text-xs font-semibold text-green-700">
+        Jadwal tersedia pada tanggal {field.tanggal_pencarian} pukul {field.jam_pencarian}
+      </span>
+    </div>
+  </div>
+)}
 
         {/* BUTTON */}
         <button
@@ -253,6 +269,8 @@ export default function Lapangan() {
 
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
+  const tanggalQuery = queryParams.get("tanggal");
+  const jamQuery = queryParams.get("jam");
   const lokasiQuery = (queryParams.get("lokasi") || "")
     .toLowerCase()
     .trim();
@@ -272,14 +290,52 @@ export default function Lapangan() {
 
 
   // Simulate async data load (skeleton → cards)
-  useEffect(() => {
-    const fetchData = async () => {
-      const data = await getLapangan();
+useEffect(() => {
+  const fetchData = async () => {
+    try {
+      let data = [];
+
+      const sedangCari =
+        tanggalQuery &&
+        jamQuery &&
+        lokasiQuery &&
+        lapanganQuery;
+
+      if (sedangCari) {
+        console.log({
+  tanggalQuery,
+  jamQuery,
+  lokasiQuery,
+  lapanganQuery,
+});
+        
+        data = await searchLapanganTersedia({
+          
+          tanggal: tanggalQuery,
+          jam: jamQuery,
+          lokasi: lokasiQuery,
+          tipe: lapanganQuery,
+        });
+      } else {
+        data = await getLapangan();
+      }
+
       setDataLapangan(data);
+    } catch (err) {
+      console.error(err);
+      setDataLapangan([]);
+    } finally {
       setLoaded(true);
-    };
-    fetchData();
-  }, []);
+    }
+  };
+
+  fetchData();
+}, [
+  tanggalQuery,
+  jamQuery,
+  lokasiQuery,
+  lapanganQuery,
+]);
 
   // Welcome toast
   useEffect(() => {
@@ -309,18 +365,7 @@ export default function Lapangan() {
 }
 //  dari searc bar juga
   // ── FILTER DARI SEARCH BAR ─────────────────────────────
-const filteredLapangan = dataLapangan.filter((field) => {
-  const fieldLokasi = normalize(field.alamat || "");
-  const fieldNama = normalize(field.nama || "");
-
-  const matchLokasi =
-    !lokasiQuery || fieldLokasi.includes(normalize(lokasiQuery));
-
-  const matchLapangan =
-    !lapanganQuery || fieldNama.includes(normalize(lapanganQuery));
-
-  return matchLokasi && matchLapangan;
-});
+const filteredLapangan = dataLapangan;
 
 const futsalData = filteredLapangan.filter((f) =>
   normalize(f.tipe || "").includes("futsal")
@@ -374,6 +419,23 @@ const futsalCount = futsalData.length;
 
   </div>
 </section>
+{isSearchMode &&
+  loaded &&
+  filteredLapangan.length === 0 && (
+    <div className="px-5 sm:px-10 lg:px-16 xl:px-24 py-20 text-center">
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-10">
+        <h3 className="text-2xl font-bold text-gray-800 mb-3">
+          Tidak ada lapangan tersedia
+        </h3>
+
+        <p className="text-gray-500">
+          Tidak ditemukan lapangan yang tersedia pada
+          tanggal, jam, lokasi, dan jenis olahraga yang
+          dipilih.
+        </p>
+      </div>
+    </div>
+)}
 
        {/* FUTSAL SECTION */}
 {(!isSearchMode || futsalData.length > 0) && (

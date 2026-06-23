@@ -72,88 +72,106 @@ exports.searchLapangan = async (req, res) => {
 
   }
 };
-exports.searchAvailableLapangan =
-  async (req, res) => {
-    try {
-      const {
-        tanggal,
-        jam,
-        lokasi,
-        tipe,
-      } = req.query;
+exports.searchAvailableLapangan = async (req, res) => {
+  try {
+    const {
+      tanggal,
+      jam,
+      lokasi,
+      tipe,
+    } = req.query;
 
-      if (
-        !tanggal ||
-        !jam ||
-        !lokasi ||
-        !tipe
-      ) {
-        return res.status(400).json({
-          message:
-            "tanggal, jam, lokasi dan tipe wajib diisi",
-        });
-      }
+    if (
+      !tanggal ||
+      !jam ||
+      !lokasi ||
+      !tipe
+    ) {
+      return res.status(400).json({
+        message:
+          "tanggal, jam, lokasi dan tipe wajib diisi",
+      });
+    }
 
-      const jadwalTersedia =
-        await Jadwal.findAll({
-          where: {
-            tanggal,
-            jam_mulai: jam,
-            status: "tersedia",
-          },
-        });
+const jadwalTersedia =
+  await Jadwal.findAll({
+    where: {
+      tanggal,
+      jam_mulai: jam,
+      status: "tersedia",
+    },
+  });
 
-      if (
-        jadwalTersedia.length === 0
-      ) {
-        return res.json([]);
-      }
+    console.log(
+      "jadwal ditemukan:",
+      jadwalTersedia.length
+    );
 
-      const lapanganIds =
-        [
-          ...new Set(
-            jadwalTersedia.map(
-              (j) => j.lapangan_id
-            )
-          ),
-        ];
+    if (jadwalTersedia.length === 0) {
+      return res.json([]);
+    }
 
-      const kataLokasi = lokasi
+    const lapanganIds = [
+      ...new Set(
+        jadwalTersedia.map(
+          (j) => j.lapangan_id
+        )
+      ),
+    ];
+
+    const kataLokasi = lokasi
       .split(",")
       .map((item) => item.trim())
       .filter(Boolean);
 
-    const lapangan =
-      await Lapangan.findAll({
-        where: {
-          id: lapanganIds,
+const lokasiUtama = kataLokasi[0];
 
-          tipe: String(tipe)
-            .toLowerCase()
-            .replace(/\s/g, ""),
+const lapangan = await Lapangan.findAll({
+  where: {
+    id: {
+      [Op.in]: lapanganIds,
+    },
 
-          [Op.and]: kataLokasi.map((kata) => ({
-            alamat: {
-              [Op.iLike]: `%${kata}%`,
-            },
-          })),
-        },
-      });
+    tipe: String(tipe)
+      .toLowerCase()
+      .replace(/\s/g, ""),
 
-      return res.json(
-        lapangan
+    alamat: {
+      [Op.iLike]: `%${lokasiUtama}%`,
+    },
+  },
+});
+
+      console.log("lapangan ids =", lapanganIds);
+
+      console.log(
+        "lapangan hasil filter =",
+        lapangan.map((x) => ({
+          id: x.id,
+          nama: x.nama,
+          alamat: x.alamat,
+          tipe: x.tipe,
+        }))
       );
 
-    } catch (error) {
+    const result = lapangan.map((lap) => ({
+      ...lap.toJSON(),
+      tanggal_pencarian: tanggal,
+      jam_pencarian: jam,
+    }));
 
-      console.error(error);
+return res.json(result);
 
-      return res.status(500).json({
-        message:
-          "Gagal mencari lapangan",
-      });
-    }
-  };
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      message:
+        "Gagal mencari lapangan",
+      error: error.message,
+    });
+  }
+};
 
 // ✅ NEW: ambil semua lapangan
 exports.getAll = async (req, res) => {

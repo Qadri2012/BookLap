@@ -31,6 +31,9 @@ import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
 import AdminApproval from "./pages/admin/AdminApproval";
 import Pengaturan from "./pages/admin/Pengaturan";
 import Kontak from "./pages/kontak";
+import ScrollToTop from "./components/ScrollToTop";
+import TestSupabase from "./pages/TestSupabase";
+import AdminChat from "./pages/admin/AdminChat";
 
 function App() {
   const location = useLocation();
@@ -51,6 +54,7 @@ function App() {
     <AuthProvider>
       <div>
         {!hideNavbar && <Navbar />}
+        <ScrollToTop />
 
         <Routes>
           {/* PUBLIC */}
@@ -69,24 +73,12 @@ function App() {
           <Route path="/riwayat" element={<Riwayat />} />
           <Route path="/profil" element={<Profile />} />
           <Route path="/admin/pengaturan" element={<Pengaturan />} />
+          <Route path="/test-supabase" element={<TestSupabase />} />
+          
 
           {/* USER PROTECTED */}
-          <Route
-            path="/pemesanan"
-            element={
-              <ProtectedRoute roles={["user", "mitra", "admin"]}>
-                <Pemesanan />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/transfer"
-            element={
-              <ProtectedRoute roles={["user", "mitra", "admin"]}>
-                <Transfer />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/pemesanan" element={ <ProtectedRoute roles={["user", "mitra", "admin"]}> <Pemesanan /> </ProtectedRoute>}/>
+          <Route path="/transfer" element={ <ProtectedRoute roles={["user", "mitra", "admin"]}> <Transfer /> </ProtectedRoute> } />
           <Route
             path="/cash"
             element={
@@ -112,6 +104,8 @@ function App() {
             }
           />
 
+        
+
          {/* ADMIN */}
         <Route
           path="/admin"
@@ -129,6 +123,7 @@ function App() {
           <Route path="jadwal" element={<AdminJadwal />} />
           <Route path="user" element={<AdminUser />} />
           <Route path="laporan" element={<AdminLaporan />} />
+          <Route path="chat" element={<AdminChat />} />
         </Route>
         
         </Routes>
